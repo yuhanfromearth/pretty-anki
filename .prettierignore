@@ -1,0 +1,9 @@
+**/dist/**
+**/node_modules/**
+**/.tanstack/**
+**/.output/**
+**/.nitro/**
+**/coverage/**
+**/*.gen.ts
+apps/ui/src/routeTree.gen.ts
+package-lock.json
