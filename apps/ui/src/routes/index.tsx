@@ -1,16 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '#/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card';
 
 export const Route = createFileRoute('/')({ component: DecksPage });
 
 function DecksPage() {
-  const { data: decks, isPending, error } = useQuery<string[]>({
+  const {
+    data: decks,
+    isPending,
+    error,
+  } = useQuery<string[]>({
     queryKey: ['decks'],
     queryFn: () => fetch('/api/anki/decks').then((r) => r.json()),
   });

@@ -6,10 +6,16 @@ export class AnkiConnectService {
   private readonly url: string;
 
   constructor(configService: ConfigService) {
-    this.url = configService.get<string>('ANKI_CONNECT_URL', 'http://localhost:8765');
+    this.url = configService.get<string>(
+      'ANKI_CONNECT_URL',
+      'http://localhost:8765',
+    );
   }
 
-  async invoke<T>(action: string, params: Record<string, unknown> = {}): Promise<T> {
+  async invoke<T>(
+    action: string,
+    params: Record<string, unknown> = {},
+  ): Promise<T> {
     const res = await fetch(this.url, {
       method: 'POST',
       body: JSON.stringify({ action, version: 6, params }),
