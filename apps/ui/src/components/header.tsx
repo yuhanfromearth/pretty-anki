@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Sun, Moon, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import type { Streak } from '@nts/dtos';
 
 export function Header() {
@@ -18,6 +19,19 @@ export function Header() {
     localStorage.setItem('theme', next ? 'dark' : 'light');
   };
 
+  const health = useQuery<{ connected: boolean }>({
+    queryKey: ['anki-health'],
+    queryFn: async () => {
+      const r = await fetch('/api/anki/health');
+      if (!r.ok) return { connected: false };
+      return r.json() as Promise<{ connected: boolean }>;
+    },
+    refetchInterval: 15_000,
+    retry: false,
+  });
+
+  const connected = health.data?.connected ?? false;
+
   const streak = useQuery<Streak>({
     queryKey: ['streak'],
     queryFn: async () => {
@@ -33,7 +47,38 @@ export function Header() {
       <div className="flex h-12 items-center rounded-2xl bg-milk-50/90 backdrop-blur-sm border border-milk-300/40 px-5 shadow-soft">
         <nav className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2">
-            <span className="inline-block size-2 rounded-full bg-mint-500 shadow-[0_0_0_4px_var(--color-mint-100)]" />
+            <span className="relative inline-flex size-5 items-center justify-center">
+              <AnimatePresence>
+                {connected && (
+                  <motion.span
+                    key="ping"
+                    className="absolute rounded-full"
+                    style={{
+                      width: 8,
+                      height: 8,
+                      backgroundColor: '#9ec5ad',
+                    }}
+                    animate={{
+                      scale: [1, 3.5, 1],
+                      opacity: [0.6, 0, 0],
+                    }}
+                    transition={{
+                      duration: 2.5,
+                      repeat: Number.POSITIVE_INFINITY,
+                      ease: 'easeOut',
+                      times: [0, 0.8, 1],
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+              <span
+                className={`relative inline-flex size-2 rounded-full ${
+                  connected
+                    ? 'bg-mint-500 shadow-[0_0_0_4px_var(--color-mint-100)]'
+                    : 'bg-rose-300/70 shadow-[0_0_0_4px_rgba(244,204,204,0.4)]'
+                }`}
+              />
+            </span>
             <span className="font-display text-base font-medium tracking-tight text-ink-900">
               pretty&#8209;anki
             </span>

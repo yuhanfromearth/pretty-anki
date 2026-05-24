@@ -43,6 +43,18 @@ export class AnkiController {
     return this.anki.getReviewPace();
   }
 
+  @Get('health')
+  @ApiOperation({ summary: 'Check AnkiConnect connectivity' })
+  @ApiOkResponse({ description: 'Connection status' })
+  async getHealth() {
+    try {
+      await this.anki.invoke('version');
+      return { connected: true };
+    } catch {
+      return { connected: false };
+    }
+  }
+
   @Delete('decks/:name')
   @ApiOperation({ summary: 'Delete a deck and all its cards' })
   @ApiParam({ name: 'name', description: 'Deck name' })
