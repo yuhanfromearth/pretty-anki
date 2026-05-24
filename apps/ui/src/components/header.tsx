@@ -4,9 +4,11 @@ import { Sun, Moon, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Streak } from '@nts/dtos';
+import { SettingsDialog } from '#/components/settings-dialog';
 
 export function Header() {
   const [dark, setDark] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains('dark'));
@@ -102,11 +104,15 @@ export function Header() {
           >
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </button>
-          <button className="flex size-8 items-center justify-center rounded-lg text-ink-300 transition-colors hover:bg-milk-100 hover:text-ink-500">
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="flex size-8 items-center justify-center rounded-lg text-ink-300 transition-colors hover:bg-milk-100 hover:text-ink-500"
+          >
             <Settings className="size-4" />
           </button>
         </div>
       </div>
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </header>
   );
 }

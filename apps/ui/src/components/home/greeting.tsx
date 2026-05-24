@@ -1,4 +1,5 @@
-import type { DeckStats, ReviewPace } from '@nts/dtos';
+import { useQuery } from '@tanstack/react-query';
+import type { DeckStats, ReviewPace, UserSettings } from '@nts/dtos';
 
 interface GreetingProps {
   deckStats: DeckStats | undefined;
@@ -6,9 +7,24 @@ interface GreetingProps {
 }
 
 export function Greeting({ deckStats, reviewPace }: GreetingProps) {
+  const settings = useQuery<UserSettings>({
+    queryKey: ['user-settings'],
+    queryFn: async () => {
+      const r = await fetch('/api/settings');
+      if (!r.ok) throw new Error(`settings: ${r.status}`);
+      return r.json() as Promise<UserSettings>;
+    },
+  });
+
   const hour = new Date().getHours();
+  const name = settings.data?.displayName;
+  const avatar = settings.data?.avatar;
   const greeting =
-    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    hour >= 2 && hour < 12
+      ? 'Good morning'
+      : hour >= 12 && hour < 18
+        ? 'Good afternoon'
+        : 'Good evening';
 
   const now = new Date();
   const weekday = now
@@ -38,9 +54,17 @@ export function Greeting({ deckStats, reviewPace }: GreetingProps) {
       <p className="font-mono text-[11px] font-semibold tracking-[0.16em] text-ink-300">
         {weekday} · {month} {day}
       </p>
-      <h1 className="font-display text-4xl sm:text-5xl font-bold italic text-mint-700 tracking-tight">
-        {greeting}.
-      </h1>
+      <div className="flex items-center gap-4">
+        {avatar && (
+          <div className="flex size-10 sm:size-12 shrink-0 items-center justify-center rounded-full border-2 border-milk-300/60 bg-milk-100 overflow-hidden">
+            <img src={avatar} alt="Avatar" className="size-full object-cover" />
+          </div>
+        )}
+        <h1 className="font-display text-4xl sm:text-5xl font-bold italic text-mint-700 tracking-tight">
+          {greeting}
+          {name ? `, ${name}` : ''}.
+        </h1>
+      </div>
       {totalDue > 0 ? (
         <p className="text-[15px] text-ink-500">
           You have{' '}

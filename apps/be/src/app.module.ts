@@ -5,6 +5,8 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AnkiController } from './anki/anki.controller.js';
 import { AnkiConnectService } from './anki/anki-connect.service.js';
+import { SettingsController } from './settings/settings.controller.js';
+import { SettingsService } from './settings/settings.service.js';
 import { ConfigModule } from '@nestjs/config';
 import { APP_PIPE } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -26,10 +28,11 @@ const clientRoot = join(
       rootPath: clientRoot,
     }),
   ],
-  controllers: [AppController, AnkiController],
+  controllers: [AppController, AnkiController, SettingsController],
   providers: [
     AppService,
     AnkiConnectService,
+    SettingsService,
     {
       provide: APP_PIPE,
       useClass: ZodValidationPipe,
