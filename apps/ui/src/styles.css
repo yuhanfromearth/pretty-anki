@@ -22,24 +22,36 @@ body {
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-korean: 'Noto Serif KR', serif;
 
-  --color-milk-50: #fdfbf7;
-  --color-milk-100: #f8f2e7;
-  --color-milk-200: #f0e6d3;
-  --color-milk-300: #eadbc8;
-  --color-milk-400: #d9c5ab;
-  --color-milk-500: #b8a088;
+  --color-milk-50: var(--milk-50);
+  --color-milk-100: var(--milk-100);
+  --color-milk-200: var(--milk-200);
+  --color-milk-300: var(--milk-300);
+  --color-milk-400: var(--milk-400);
+  --color-milk-500: var(--milk-500);
 
-  --color-ink-900: #2c2523;
-  --color-ink-700: #4a3e38;
-  --color-ink-500: #6b5d54;
-  --color-ink-300: #9e8f84;
-  --color-ink-100: #c9beb3;
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-300: var(--ink-300);
+  --color-ink-100: var(--ink-100);
 
-  --color-mint-50: #edf5f0;
-  --color-mint-100: #d6e8dc;
-  --color-mint-300: #b8d8c8;
-  --color-mint-500: #7fb39a;
-  --color-mint-700: #4f8a72;
+  --color-mint-50: var(--mint-50);
+  --color-mint-100: var(--mint-100);
+  --color-mint-300: var(--mint-300);
+  --color-mint-500: var(--mint-500);
+  --color-mint-700: var(--mint-700);
+
+  --color-cocoa-950: var(--cocoa-950, #12100c);
+  --color-cocoa-900: var(--cocoa-900, #1a1612);
+  --color-cocoa-800: var(--cocoa-800, #221c17);
+  --color-cocoa-700: var(--cocoa-700, #2b241e);
+  --color-cocoa-600: var(--cocoa-600, #3a312a);
+  --color-cocoa-500: var(--cocoa-500, #4d4239);
+
+  --color-cream-50: var(--cream-50, #f7ecd2);
+  --color-cream-200: var(--cream-200, #e8d9b9);
+  --color-cream-400: var(--cream-400, #b8a888);
+  --color-cream-600: var(--cream-600, #7d6e58);
 
   --color-terra: #d88a7c;
   --color-apricot: #e2b48e;
@@ -91,6 +103,25 @@ body {
 }
 
 :root {
+  --milk-50: #fdfbf7;
+  --milk-100: #f8f2e7;
+  --milk-200: #f0e6d3;
+  --milk-300: #eadbc8;
+  --milk-400: #d9c5ab;
+  --milk-500: #b8a088;
+
+  --ink-900: #2c2523;
+  --ink-700: #4a3e38;
+  --ink-500: #6b5d54;
+  --ink-300: #9e8f84;
+  --ink-100: #c9beb3;
+
+  --mint-50: #edf5f0;
+  --mint-100: #d6e8dc;
+  --mint-300: #b8d8c8;
+  --mint-500: #7fb39a;
+  --mint-700: #4f8a72;
+
   --background: #f0e6d3;
   --foreground: #2c2523;
   --card: #f8f2e7;
@@ -123,6 +154,88 @@ body {
   --sidebar-accent-foreground: #4f8a72;
   --sidebar-border: #eadbc8;
   --sidebar-ring: #7fb39a;
+  --page-bg:
+    radial-gradient(
+      60% 50% at 80% 0%,
+      rgba(226, 180, 142, 0.2) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      50% 40% at 0% 100%,
+      rgba(216, 138, 124, 0.15) 0%,
+      transparent 55%
+    ),
+    var(--background);
+}
+
+.dark {
+  --background: #1a1612;
+  --foreground: #f0e2c5;
+  --card: #221c17;
+  --card-foreground: #f0e2c5;
+  --popover: #2b241e;
+  --popover-foreground: #f7ecd2;
+  --primary: #8ec0a8;
+  --primary-foreground: #12100c;
+  --secondary: #2b241e;
+  --secondary-foreground: #e8d9b9;
+  --muted: #221c17;
+  --muted-foreground: #b8a888;
+  --accent: #2a3f33;
+  --accent-foreground: #b8d8c8;
+  --destructive: #e09a8c;
+  --border: #3a312a;
+  --input: #3a312a;
+  --ring: #8ec0a8;
+  --chart-1: #8ec0a8;
+  --chart-2: #e09a8c;
+  --chart-3: #e2b48e;
+  --chart-4: #a8c5d6;
+  --chart-5: #c9b6e4;
+  --sidebar: #221c17;
+  --sidebar-foreground: #f0e2c5;
+  --sidebar-primary: #8ec0a8;
+  --sidebar-primary-foreground: #12100c;
+  --sidebar-accent: #2a3f33;
+  --sidebar-accent-foreground: #b8d8c8;
+  --sidebar-border: #3a312a;
+  --sidebar-ring: #8ec0a8;
+
+  --milk-50: #2b241e;
+  --milk-100: #221c17;
+  --milk-200: #1a1612;
+  --milk-300: #3a312a;
+  --milk-400: #4d4239;
+  --milk-500: #6b5e4f;
+
+  --ink-900: #f7ecd2;
+  --ink-700: #e8d9b9;
+  --ink-500: #b8a888;
+  --ink-300: #7d6e58;
+  --ink-100: #5a4f42;
+
+  --mint-50: #1f2e26;
+  --mint-100: #2a3f33;
+  --mint-300: #b8d8c8;
+  --mint-500: #8ec0a8;
+  --mint-700: #b8d8c8;
+
+  --shadow-soft: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  --shadow-medium: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+  --shadow-heavy: 0 18px 52px 0 rgba(0, 0, 0, 0.45);
+
+  --page-bg:
+    radial-gradient(
+      60% 50% at 80% 0%,
+      rgba(226, 180, 142, 0.05) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      50% 40% at 0% 100%,
+      rgba(216, 138, 124, 0.04) 0%,
+      transparent 55%
+    ),
+    var(--background);
 }
 
 @layer base {

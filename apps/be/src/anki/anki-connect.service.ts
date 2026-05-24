@@ -142,6 +142,13 @@ export class AnkiConnectService {
     return { medianMs, totalDue };
   }
 
+  async deleteDeck(deckName: string, cardsToo: boolean): Promise<void> {
+    await this.invoke<void>('deleteDecks', {
+      decks: [deckName],
+      cardsToo,
+    });
+  }
+
   private async countMatureCards(deckName: string): Promise<number> {
     const cards = await this.invoke<number[]>('findCards', {
       query: `deck:"${deckName}" prop:ivl>=84`,

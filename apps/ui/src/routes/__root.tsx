@@ -55,9 +55,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-dvh bg-fixed bg-[radial-gradient(60%_50%_at_80%_0%,rgba(226,180,142,0.2)_0%,transparent_60%),radial-gradient(50%_40%_at_0%_100%,rgba(216,138,124,0.15)_0%,transparent_55%)]">
+      <body
+        className="h-dvh overflow-hidden flex flex-col"
+        style={{ background: 'var(--page-bg)', backgroundAttachment: 'fixed' }}
+      >
         <Header />
-        <main className="max-w-5xl mx-auto px-5 sm:px-8 pt-8 pb-16">
+        <main className="min-h-0 flex-1 max-w-5xl w-full mx-auto px-5 sm:px-8 pt-8 pb-4">
           {children}
         </main>
         {/*<TanStackDevtools

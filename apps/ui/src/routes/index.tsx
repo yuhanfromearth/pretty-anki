@@ -74,7 +74,7 @@ function HomePage() {
     deckStats.data?.decks.find((d) => d.name === selectedDeck) ?? pickUpDeck;
 
   return (
-    <div className="space-y-8">
+    <div className="flex h-full flex-col gap-8">
       <Greeting deckStats={deckStats.data} reviewPace={reviewPace.data} />
 
       {displayDeck && <PickUpCard deck={displayDeck} />}
@@ -122,7 +122,7 @@ function ErrorState({
       </p>
       <button
         onClick={onRetry}
-        className="inline-flex items-center gap-2 rounded-xl bg-mint-500 px-4 py-2 text-sm font-medium text-white shadow-soft transition-colors hover:bg-mint-700"
+        className="inline-flex items-center gap-2 rounded-xl bg-mint-500 px-4 py-2 text-sm font-medium text-white dark:text-cocoa-950 shadow-soft transition-colors hover:bg-mint-700"
       >
         <RefreshCw className="size-4" />
         Try again

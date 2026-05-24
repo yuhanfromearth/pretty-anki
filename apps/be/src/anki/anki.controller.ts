@@ -1,5 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiOperation, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Delete, Get, Param } from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiOkResponse,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AnkiConnectService } from './anki-connect.service.js';
 import { DeckStatsDto } from '../dtos/deck-stats.dto.js';
 import { StreakDto } from '../dtos/streak.dto.js';
@@ -36,5 +41,13 @@ export class AnkiController {
   @ApiOkResponse({ type: ReviewPaceDto })
   getReviewPace() {
     return this.anki.getReviewPace();
+  }
+
+  @Delete('decks/:name')
+  @ApiOperation({ summary: 'Delete a deck and all its cards' })
+  @ApiParam({ name: 'name', description: 'Deck name' })
+  @ApiOkResponse({ description: 'Deck deleted' })
+  deleteDeck(@Param('name') name: string) {
+    return this.anki.deleteDeck(name, true);
   }
 }

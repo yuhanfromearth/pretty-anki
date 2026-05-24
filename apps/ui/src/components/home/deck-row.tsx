@@ -1,5 +1,15 @@
-import { ChevronUp, Check } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronUp, Check, Trash2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { DeckStatsItem } from '@nts/dtos';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from '#/components/ui/dialog';
+import { Button } from '#/components/ui/button';
 
 interface DeckRowProps {
   deck: DeckStatsItem;
@@ -40,6 +50,26 @@ export function DeckRow({ deck, onClick }: DeckRowProps) {
       : 0;
   const isClear = dueCount === 0;
   const idx = hashIndex(deck.name);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(
+        `/api/anki/decks/${encodeURIComponent(deck.name)}`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+    },
+    onSuccess: () => {
+      setDialogOpen(false);
+      setConfirmed(false);
+      queryClient.invalidateQueries({ queryKey: ['deck-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['review-pace'] });
+    },
+  });
 
   return (
     <div
@@ -88,6 +118,75 @@ export function DeckRow({ deck, onClick }: DeckRowProps) {
           </span>
         )}
       </div>
+
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setConfirmed(false);
+            deleteMutation.reset();
+          }
+        }}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDialogOpen(true);
+          }}
+          className="flex size-7 items-center justify-center rounded-md text-ink-100 opacity-0 transition-all hover:bg-terra/10 hover:text-terra group-hover:opacity-100"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+
+        <DialogContent
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          className="max-w-sm"
+        >
+          <DialogTitle className="text-base font-semibold text-ink-900">
+            Delete &ldquo;{deck.name}&rdquo;?
+          </DialogTitle>
+          <DialogDescription className="mt-1.5 text-sm text-ink-500">
+            This will permanently delete the deck and all{' '}
+            <strong className="text-ink-700">{deck.totalCards}</strong> cards in
+            it. This cannot be undone.
+          </DialogDescription>
+
+          {deleteMutation.isError && (
+            <p className="mt-2 text-xs text-terra">
+              Failed to delete deck. Is Anki running?
+            </p>
+          )}
+
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <DialogClose>
+              <Button variant="ghost" size="sm">
+                Cancel
+              </Button>
+            </DialogClose>
+
+            {!confirmed ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setConfirmed(true)}
+              >
+                Delete deck
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate()}
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Yes, I’m sure'}
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ChevronUp className="size-4 text-ink-100 transition-colors group-hover:text-ink-300" />
     </div>

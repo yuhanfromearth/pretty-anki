@@ -29,7 +29,7 @@ export function Header() {
   });
 
   return (
-    <header className="sticky top-0 z-50 max-w-6xl mx-auto px-5 sm:px-8 pt-6 pb-4">
+    <header className="sticky top-0 z-50 w-full max-w-6xl mx-auto shrink-0 px-5 sm:px-8 pt-6 pb-4">
       <div className="flex h-12 items-center rounded-2xl bg-milk-50/90 backdrop-blur-sm border border-milk-300/40 px-5 shadow-soft">
         <nav className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2">
