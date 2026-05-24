@@ -61,12 +61,14 @@ export function DeckRow({ deck }: DeckRowProps) {
             style={{ width: `${mastery}%` }}
           />
         </div>
-        <span className="text-xs text-ink-300 w-8 text-right">{mastery}%</span>
-        <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 rounded-lg bg-mint-700 px-3 py-2 text-[11px] leading-relaxed text-white opacity-0 shadow-medium transition-opacity group-hover/mastery:opacity-100">
+        <span className="font-mono text-xs text-ink-300 w-8 text-right">
+          {mastery}%
+        </span>
+        <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44 rounded-md bg-mint-700 px-2.5 py-1.5 text-[10px] leading-snug text-white opacity-0 shadow-medium transition-opacity group-hover/mastery:opacity-100">
           <span className="font-semibold">Mastery at {mastery}%</span>
           <br />
           Percentage of cards with a review interval of 12 weeks or more.
-          <div className="absolute top-full right-3 border-4 border-transparent border-t-mint-700" />
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-mint-700" />
         </div>
       </div>
 
@@ -77,7 +79,9 @@ export function DeckRow({ deck }: DeckRowProps) {
             clear
           </span>
         ) : (
-          <span className="text-sm font-bold text-mint-700">{dueCount}</span>
+          <span className="font-mono text-sm font-bold text-mint-700">
+            {dueCount}
+          </span>
         )}
       </div>
 

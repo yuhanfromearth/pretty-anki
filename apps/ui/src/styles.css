@@ -2,8 +2,6 @@
 @plugin "@tailwindcss/typography";
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
-@import '@fontsource-variable/inter-tight';
-@import '@fontsource-variable/fraunces';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -18,10 +16,11 @@ body {
 
 @theme inline {
   --font-sans:
-    'Inter Tight Variable', -apple-system, BlinkMacSystemFont, system-ui,
-    sans-serif;
+    'Inter Tight', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-heading: var(--font-sans);
-  --font-display: 'Fraunces Variable', Georgia, serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-korean: 'Noto Serif KR', serif;
 
   --color-milk-50: #fdfbf7;
   --color-milk-100: #f8f2e7;

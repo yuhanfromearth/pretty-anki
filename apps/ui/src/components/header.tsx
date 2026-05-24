@@ -45,7 +45,7 @@ export function Header() {
         <div className="ml-auto flex items-center gap-1">
           {streak.data && (
             <div className="mr-2 flex items-center gap-1.5 rounded-full bg-milk-200/60 border border-milk-300/50 pl-0.5 pr-2.5 py-0.5 text-xs font-medium">
-              <span className="flex size-5.5 items-center justify-center rounded-full bg-milk-400/60 text-[11px] font-semibold text-ink-700">
+              <span className="flex size-5.5 items-center justify-center rounded-full bg-milk-400/60 font-display text-[11px] font-semibold text-ink-700">
                 {streak.data.days}
               </span>
               <span className="text-ink-700">day streak</span>
