@@ -26,7 +26,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'nest-tanstack-template',
+        title: 'pretty anki',
       },
     ],
     links: [
@@ -50,10 +50,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-dvh bg-background">
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </main>
+      <body className="min-h-dvh bg-milk-50 bg-[radial-gradient(60%_50%_at_80%_0%,rgba(184,216,200,0.22)_0%,transparent_60%),radial-gradient(50%_40%_at_0%_100%,rgba(234,219,200,0.55)_0%,transparent_55%)]">
+        <main className="max-w-3xl mx-auto px-5 sm:px-8 py-10">{children}</main>
         {/*<TanStackDevtools
           config={{
             position: "bottom-right",
