@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'motion/react';
 import { ChevronUp, Check, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { DeckStatsItem } from '@nts/dtos';
@@ -9,10 +10,12 @@ import {
   DialogDescription,
   DialogClose,
 } from '#/components/ui/dialog';
+import { Tooltip } from '@base-ui/react/tooltip';
 import { Button } from '#/components/ui/button';
 
 interface DeckRowProps {
   deck: DeckStatsItem;
+  isSelected?: boolean;
   onClick?: () => void;
 }
 
@@ -42,7 +45,7 @@ function hashIndex(name: string): number {
   return Math.abs(hash) % GLYPH_COLORS.length;
 }
 
-export function DeckRow({ deck, onClick }: DeckRowProps) {
+export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
   const dueCount = deck.newCount + deck.learnCount + deck.reviewCount;
   const mastery =
     deck.totalCards > 0
@@ -72,9 +75,36 @@ export function DeckRow({ deck, onClick }: DeckRowProps) {
   });
 
   return (
-    <div
+    <motion.div
       onClick={onClick}
-      className="group flex items-center gap-3 rounded-md border-b-2 border-milk-300 px-4 py-3 cursor-pointer transition-colors hover:bg-milk-300/50"
+      className={`group flex items-center gap-3 rounded-md px-4 py-3 cursor-pointer ${
+        isSelected
+          ? 'bg-milk-300/60 border-b border-milk-400/50'
+          : 'border-b-2 border-milk-300 hover:bg-milk-300/50'
+      }`}
+      animate={{
+        rotateX: isSelected ? 0 : 2,
+        translateZ: isSelected ? 0 : 12,
+        boxShadow: isSelected
+          ? '0 1px 2px 0 rgba(44, 37, 35, 0.04)'
+          : '0 4px 16px 0 rgba(44, 37, 35, 0.07), 0 1px 3px 0 rgba(44, 37, 35, 0.04)',
+      }}
+      whileHover={{
+        scale: 0.985,
+        ...(isSelected
+          ? {
+              boxShadow: '0 1px 3px 0 rgba(44, 37, 35, 0.05)',
+            }
+          : {
+              rotateX: 0,
+              translateZ: 6,
+              boxShadow:
+                '0 2px 8px 0 rgba(44, 37, 35, 0.06)',
+            }),
+      }}
+      whileTap={{ scale: 0.975 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+      style={{ transformStyle: 'preserve-3d' }}
     >
       <div
         className={`flex size-12 shrink-0 items-center justify-center rounded-full border text-lg font-display ${GLYPH_COLORS[idx]}`}
@@ -88,23 +118,35 @@ export function DeckRow({ deck, onClick }: DeckRowProps) {
         </div>
       </div>
 
-      <div className="relative flex items-center gap-0.5 w-20 group/mastery">
-        <div className="h-1.5 w-12 rounded-full bg-milk-400 overflow-hidden">
-          <div
-            className={`h-full rounded-full ${MASTERY_COLORS[idx]} transition-all`}
-            style={{ width: `${mastery}%` }}
-          />
-        </div>
-        <span className="font-mono text-xs text-ink-300 w-8 text-right">
-          {mastery}%
-        </span>
-        <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44 rounded-md bg-mint-700 px-2.5 py-1.5 text-[10px] leading-snug text-white opacity-0 shadow-medium transition-opacity group-hover/mastery:opacity-100">
-          <span className="font-semibold">Mastery at {mastery}%</span>
-          <br />
-          Percentage of cards with a review interval of 12 weeks or more.
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-mint-700" />
-        </div>
-      </div>
+      <Tooltip.Provider delay={200}>
+        <Tooltip.Root>
+          <Tooltip.Trigger
+            className="group/mastery flex items-center gap-0.5 w-20 cursor-default"
+            render={<div />}
+          >
+            <div className="h-1.5 w-12 rounded-full bg-milk-400 overflow-hidden">
+              <div
+                className={`h-full rounded-full ${MASTERY_COLORS[idx]} transition-all`}
+                style={{ width: `${mastery}%` }}
+              />
+            </div>
+            <span className="font-mono text-xs text-ink-300 w-8 text-right transition-colors group-hover/mastery:text-ink-500">
+              {mastery}%
+            </span>
+          </Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Positioner side="top" sideOffset={8}>
+              <Tooltip.Popup className="z-50 w-44 rounded-md bg-[#3a7a5a] px-2.5 py-1.5 text-[10px] leading-snug text-white shadow-medium">
+                <span className="font-semibold">Mastery at {mastery}%</span>
+                <br />
+                Percentage of cards with a review interval of 12 weeks or
+                more.
+                <Tooltip.Arrow className="fill-[#3a7a5a]" />
+              </Tooltip.Popup>
+            </Tooltip.Positioner>
+          </Tooltip.Portal>
+        </Tooltip.Root>
+      </Tooltip.Provider>
 
       <div className="w-14 text-right">
         {isClear ? (
@@ -189,6 +231,6 @@ export function DeckRow({ deck, onClick }: DeckRowProps) {
       </Dialog>
 
       <ChevronUp className="size-4 text-ink-100 transition-colors group-hover:text-ink-300" />
-    </div>
+    </motion.div>
   );
 }
