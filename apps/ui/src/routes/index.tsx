@@ -28,12 +28,6 @@ function DecksPage() {
     <div className="space-y-10">
       {/* Header */}
       <header className="space-y-1 pt-6">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="inline-block size-2 rounded-full bg-mint-500 shadow-[0_0_0_4px_var(--color-mint-100)]" />
-          <span className="font-display text-lg font-medium tracking-tight text-ink-900">
-            pretty anki
-          </span>
-        </div>
         <h1 className="text-3xl font-semibold tracking-tight text-ink-900">
           {greeting}
         </h1>
