@@ -9,7 +9,7 @@ export function PickUpCard({ deck }: PickUpCardProps) {
   const dueNow = deck.newCount + deck.learnCount + deck.reviewCount;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-milk-100/80 border border-milk-200/60 px-6 py-5 shadow-soft">
+    <div className="relative overflow-hidden rounded-2xl bg-milk-50/90 border border-milk-200/60 px-6 py-5 shadow-soft">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_40%,rgba(234,219,200,0.3)_0%,transparent_60%)]" />
       <div className="relative flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-3">

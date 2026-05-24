@@ -3,9 +3,10 @@ import { DeckRow } from './deck-row';
 
 interface DeckListProps {
   deckStats: DeckStats;
+  onSelectDeck?: (name: string) => void;
 }
 
-export function DeckList({ deckStats }: DeckListProps) {
+export function DeckList({ deckStats, onSelectDeck }: DeckListProps) {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
@@ -16,7 +17,11 @@ export function DeckList({ deckStats }: DeckListProps) {
 
       <div className="grid gap-2">
         {deckStats.decks.map((deck) => (
-          <DeckRow key={deck.name} deck={deck} />
+          <DeckRow
+            key={deck.name}
+            deck={deck}
+            onClick={() => onSelectDeck?.(deck.name)}
+          />
         ))}
       </div>
     </section>

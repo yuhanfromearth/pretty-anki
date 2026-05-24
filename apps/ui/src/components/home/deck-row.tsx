@@ -1,8 +1,9 @@
-import { ChevronRight, Check } from 'lucide-react';
+import { ChevronUp, Check } from 'lucide-react';
 import type { DeckStatsItem } from '@nts/dtos';
 
 interface DeckRowProps {
   deck: DeckStatsItem;
+  onClick?: () => void;
 }
 
 const GLYPH_COLORS = [
@@ -31,7 +32,7 @@ function hashIndex(name: string): number {
   return Math.abs(hash) % GLYPH_COLORS.length;
 }
 
-export function DeckRow({ deck }: DeckRowProps) {
+export function DeckRow({ deck, onClick }: DeckRowProps) {
   const dueCount = deck.newCount + deck.learnCount + deck.reviewCount;
   const mastery =
     deck.totalCards > 0
@@ -41,7 +42,10 @@ export function DeckRow({ deck }: DeckRowProps) {
   const idx = hashIndex(deck.name);
 
   return (
-    <div className="group flex items-center gap-3 rounded-md border-b-2 border-milk-300 px-4 py-3 cursor-pointer transition-colors hover:bg-milk-300/50">
+    <div
+      onClick={onClick}
+      className="group flex items-center gap-3 rounded-md border-b-2 border-milk-300 px-4 py-3 cursor-pointer transition-colors hover:bg-milk-300/50"
+    >
       <div
         className={`flex size-12 shrink-0 items-center justify-center rounded-full border text-lg font-display ${GLYPH_COLORS[idx]}`}
       >
@@ -85,7 +89,7 @@ export function DeckRow({ deck }: DeckRowProps) {
         )}
       </div>
 
-      <ChevronRight className="size-4 text-ink-100 transition-colors group-hover:text-ink-300" />
+      <ChevronUp className="size-4 text-ink-100 transition-colors group-hover:text-ink-300" />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import type { DeckStats, ReviewPace } from '@nts/dtos';
 import { Greeting } from '#/components/home/greeting';
@@ -42,6 +43,8 @@ function HomePage() {
     retry: false,
   });
 
+  const [selectedDeck, setSelectedDeck] = useState<string | null>(null);
+
   const isLoading = deckStats.isPending || reviewPace.isPending;
 
   const hasError = deckStats.error || reviewPace.error;
@@ -67,14 +70,17 @@ function HomePage() {
 
   const pickUpDeck = findPickUpDeck(deckStats.data!);
 
+  const displayDeck =
+    deckStats.data?.decks.find((d) => d.name === selectedDeck) ?? pickUpDeck;
+
   return (
     <div className="space-y-8">
       <Greeting deckStats={deckStats.data} reviewPace={reviewPace.data} />
 
-      {pickUpDeck && <PickUpCard deck={pickUpDeck} />}
+      {displayDeck && <PickUpCard deck={displayDeck} />}
 
       {deckStats.data && deckStats.data.decks.length > 0 && (
-        <DeckList deckStats={deckStats.data} />
+        <DeckList deckStats={deckStats.data} onSelectDeck={setSelectedDeck} />
       )}
     </div>
   );
