@@ -1,96 +1,109 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
+import type { DeckStats, ReviewPace } from '@nts/dtos';
+import { Greeting } from '#/components/home/greeting';
+import { PickUpCard } from '#/components/home/pick-up-card';
+import { DeckList } from '#/components/home/deck-list';
 
-export const Route = createFileRoute('/')({ component: DecksPage });
+export const Route = createFileRoute('/')({ component: HomePage });
 
-function DecksPage() {
-  const {
-    data: decks,
-    isPending,
-    error,
-  } = useQuery<string[]>({
-    queryKey: ['decks'],
-    queryFn: async () => {
-      const r = await fetch('/api/anki/decks');
-      if (!r.ok) throw new Error('Failed to fetch decks');
-      const data: unknown = await r.json();
-      if (!Array.isArray(data)) throw new Error('Anki is not reachable');
-      return data as string[];
-    },
+async function fetchJson<T>(url: string): Promise<T> {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${url}: ${r.status}`);
+  return r.json() as Promise<T>;
+}
+
+function HomePage() {
+  const deckStats = useQuery<DeckStats>({
+    queryKey: ['deck-stats'],
+    queryFn: () => fetchJson<DeckStats>('/api/anki/deck-stats'),
     retry: false,
   });
 
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const reviewPace = useQuery<ReviewPace>({
+    queryKey: ['review-pace'],
+    queryFn: () => fetchJson<ReviewPace>('/api/anki/review-pace'),
+    retry: false,
+  });
+
+  const isLoading = deckStats.isPending || reviewPace.isPending;
+
+  const hasError = deckStats.error || reviewPace.error;
+
+  if (hasError) {
+    return (
+      <ErrorState
+        onRetry={() => {
+          deckStats.refetch();
+          reviewPace.refetch();
+        }}
+      />
+    );
+  }
+
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  const pickUpDeck = findPickUpDeck(deckStats.data!);
 
   return (
-    <div className="space-y-10">
-      {/* Header */}
-      <header className="space-y-1 pt-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink-900">
-          {greeting}
-        </h1>
-        <p className="text-ink-500 text-[15px]">Let's start.</p>
-      </header>
+    <div className="space-y-8">
+      <Greeting deckStats={deckStats.data} reviewPace={reviewPace.data} />
 
-      {/* Deck list */}
-      <section className="space-y-3">
-        <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-ink-300">
-          Your decks
-        </span>
+      {pickUpDeck && <PickUpCard deck={pickUpDeck} />}
 
-        {isPending && (
-          <div className="flex items-center gap-3 py-8 text-ink-300 text-sm">
-            <span className="size-4 rounded-full border-2 border-ink-100 border-t-mint-500 animate-spin" />
-            Loading decks...
-          </div>
-        )}
+      {deckStats.data && deckStats.data.decks.length > 0 && (
+        <DeckList deckStats={deckStats.data} />
+      )}
+    </div>
+  );
+}
 
-        {error && (
-          <div className="rounded-xl bg-terra/10 border border-terra/30 px-4 py-3 text-sm text-terra">
-            Could not connect to Anki. Make sure Anki is running with
-            AnkiConnect enabled.
-          </div>
-        )}
+function findPickUpDeck(stats: DeckStats) {
+  const decksWithDue = stats.decks.filter(
+    (d) => d.newCount + d.learnCount + d.reviewCount > 0
+  );
 
-        {decks && decks.length === 0 && (
-          <div className="rounded-xl bg-milk-100 border border-milk-300 px-4 py-6 text-center text-sm text-ink-500">
-            No decks found. Create a deck in Anki to get started.
-          </div>
-        )}
+  if (decksWithDue.length === 0) return null;
 
-        <div className="grid gap-2">
-          {decks?.map((name) => (
-            <button
-              key={name}
-              className="group flex items-center gap-4 rounded-2xl bg-milk-100/60 backdrop-blur-sm border border-white/55 px-5 py-4 text-left shadow-soft transition-all hover:bg-milk-200 hover:shadow-medium active:scale-[0.995]"
-            >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-mint-50 text-mint-700 border border-mint-100 text-sm font-semibold">
-                {name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-ink-900 truncate">
-                  {name}
-                </div>
-              </div>
-              <svg
-                className="size-4 text-ink-100 transition-colors group-hover:text-ink-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m8.25 4.5 7.5 7.5-7.5 7.5"
-                />
-              </svg>
-            </button>
-          ))}
-        </div>
-      </section>
+  return decksWithDue.reduce((best, deck) => {
+    const bestDue = best.newCount + best.learnCount + best.reviewCount;
+    const deckDue = deck.newCount + deck.learnCount + deck.reviewCount;
+    return deckDue > bestDue ? deck : best;
+  });
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="size-16 rounded-2xl bg-terra/10 border border-terra/30 flex items-center justify-center mb-4">
+        <span className="text-2xl">⚡</span>
+      </div>
+      <h2 className="text-lg font-semibold text-ink-900 mb-1">
+        Can&apos;t reach Anki
+      </h2>
+      <p className="text-sm text-ink-500 max-w-xs mb-6">
+        Make sure Anki is running with the AnkiConnect add-on enabled on port
+        8765.
+      </p>
+      <button
+        onClick={onRetry}
+        className="inline-flex items-center gap-2 rounded-xl bg-mint-500 px-4 py-2 text-sm font-medium text-white shadow-soft transition-colors hover:bg-mint-700"
+      >
+        <RefreshCw className="size-4" />
+        Try again
+      </button>
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="flex items-center gap-3 py-24 justify-center text-ink-300 text-sm">
+      <span className="size-4 rounded-full border-2 border-ink-100 border-t-mint-500 animate-spin" />
+      Loading your decks...
     </div>
   );
 }

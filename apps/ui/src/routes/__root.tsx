@@ -51,9 +51,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-dvh bg-milk-50 bg-[radial-gradient(60%_50%_at_80%_0%,rgba(184,216,200,0.22)_0%,transparent_60%),radial-gradient(50%_40%_at_0%_100%,rgba(234,219,200,0.55)_0%,transparent_55%)]">
+      <body className="min-h-dvh bg-fixed bg-[radial-gradient(60%_50%_at_80%_0%,rgba(226,180,142,0.2)_0%,transparent_60%),radial-gradient(50%_40%_at_0%_100%,rgba(216,138,124,0.15)_0%,transparent_55%)]">
         <Header />
-        <main className="max-w-3xl mx-auto px-5 sm:px-8 py-10">{children}</main>
+        <main className="max-w-5xl mx-auto px-5 sm:px-8 pt-8 pb-16">
+          {children}
+        </main>
         {/*<TanStackDevtools
           config={{
             position: "bottom-right",
