@@ -8,10 +8,25 @@ import { DeckList } from '#/components/home/deck-list';
 
 export const Route = createFileRoute('/')({ component: HomePage });
 
+class ServerError extends Error {
+  constructor(url: string, status: number) {
+    super(`${url}: ${status}`);
+  }
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`${url}: ${r.status}`);
+  let r: Response;
+  try {
+    r = await fetch(url);
+  } catch {
+    throw new TypeError(`Failed to fetch ${url}`);
+  }
+  if (!r.ok) throw new ServerError(url, r.status);
   return r.json() as Promise<T>;
+}
+
+function isServerDown(error: Error | null): boolean {
+  return error instanceof TypeError;
 }
 
 function HomePage() {
@@ -32,8 +47,12 @@ function HomePage() {
   const hasError = deckStats.error || reviewPace.error;
 
   if (hasError) {
+    const serverDown = isServerDown(
+      deckStats.error ?? reviewPace.error ?? null
+    );
     return (
       <ErrorState
+        serverDown={serverDown}
         onRetry={() => {
           deckStats.refetch();
           reviewPace.refetch();
@@ -75,18 +94,25 @@ function findPickUpDeck(stats: DeckStats) {
   });
 }
 
-function ErrorState({ onRetry }: { onRetry: () => void }) {
+function ErrorState({
+  serverDown,
+  onRetry,
+}: {
+  serverDown: boolean;
+  onRetry: () => void;
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div className="size-16 rounded-2xl bg-terra/10 border border-terra/30 flex items-center justify-center mb-4">
-        <span className="text-2xl">⚡</span>
+        <span className="text-2xl">{serverDown ? '🔌' : '⚡'}</span>
       </div>
       <h2 className="text-lg font-semibold text-ink-900 mb-1">
-        Can&apos;t reach Anki
+        {serverDown ? 'Server unavailable' : "Can't reach Anki"}
       </h2>
       <p className="text-sm text-ink-500 max-w-xs mb-6">
-        Make sure Anki is running with the AnkiConnect add-on enabled on port
-        8765.
+        {serverDown
+          ? 'The app server is not running. Start it and try again.'
+          : 'Make sure Anki is running with the AnkiConnect add-on enabled on port 8765.'}
       </p>
       <button
         onClick={onRetry}
