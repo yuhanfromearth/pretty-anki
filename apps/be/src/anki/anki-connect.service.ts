@@ -253,8 +253,11 @@ export class AnkiConnectService {
   private stripHtml(html: string): string {
     return html
       .replace(/\[sound:[^\]]+]/g, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/div>\s*<div[^>]*>/gi, '\n')
       .replace(/<[^>]*>/g, '')
-      .trim();
+      .trim()
+      .replace(/\n/g, '<br>');
   }
 
   private async countMatureCards(deckName: string): Promise<number> {

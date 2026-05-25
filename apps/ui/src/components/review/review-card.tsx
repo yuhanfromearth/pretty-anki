@@ -71,9 +71,9 @@ export function ReviewCard({
   return (
     <motion.div
       key={cardId}
-      className="relative w-full cursor-pointer select-none"
+      className={`relative w-full ${flipped ? 'cursor-default' : 'cursor-pointer select-none'}`}
       style={{ perspective: 1200 }}
-      onClick={dismiss ? undefined : onFlip}
+      onClick={dismiss || flipped ? undefined : onFlip}
       initial={{ scale: 0.8, opacity: 0.5 }}
       animate={{
         x: dismiss ? (dismiss.direction === 'left' ? -80 : 80) : 0,
