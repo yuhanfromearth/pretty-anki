@@ -66,6 +66,9 @@ export class AnkiConnectService {
 
   async getDeckStats(): Promise<DeckStats> {
     const deckNames = await this.getDecks();
+    const nameToId = await this.invoke<Record<string, number>>(
+      'deckNamesAndIds',
+    );
     const statsMap = await this.invoke<Record<string, AnkiDeckStats>>(
       'getDeckStats',
       { decks: deckNames },
@@ -73,9 +76,8 @@ export class AnkiConnectService {
 
     const decks: DeckStatsItem[] = await Promise.all(
       deckNames.map(async (name) => {
-        const s =
-          statsMap[name] ??
-          Object.values(statsMap).find((v) => v.name === name);
+        const id = nameToId[name];
+        const s = id !== undefined ? statsMap[String(id)] : undefined;
         const [matureCards, nextReviewVocab] = await Promise.all([
           this.countMatureCards(name),
           this.getNextDueVocab(name),
