@@ -19,22 +19,12 @@ interface DeckRowProps {
   onClick?: () => void;
 }
 
-const GLYPH_COLORS = [
-  'text-mint-700 bg-mint-50 border-mint-100',
-  'text-apricot bg-apricot/10 border-apricot/20',
-  'text-sky bg-sky/10 border-sky/20',
-  'text-lilac bg-lilac/10 border-lilac/20',
-  'text-terra bg-terra/10 border-terra/20',
-  'text-ink-500 bg-butter/15 border-butter/25',
-];
-
 const MASTERY_COLORS = [
   'bg-mint-500',
-  'bg-apricot',
+  'bg-terra',
   'bg-sky',
   'bg-lilac',
-  'bg-terra',
-  'bg-butter',
+  'bg-mint-300',
 ];
 
 function hashIndex(name: string): number {
@@ -42,7 +32,7 @@ function hashIndex(name: string): number {
   for (let i = 0; i < name.length; i++) {
     hash = (hash * 31 + name.charCodeAt(i)) | 0;
   }
-  return Math.abs(hash) % GLYPH_COLORS.length;
+  return Math.abs(hash) % MASTERY_COLORS.length;
 }
 
 export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
@@ -77,44 +67,15 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
   return (
     <motion.div
       onClick={onClick}
-      className={`group flex items-center gap-3 rounded-md px-4 py-3 cursor-pointer ${
+      className={`group flex items-center gap-3 rounded-md px-3 py-2 cursor-pointer transition-colors ${
         isSelected
-          ? 'bg-milk-300/60 border-b border-milk-400/50'
-          : 'border-b-2 border-milk-300 hover:bg-milk-300/50'
+          ? 'bg-milk-400'
+          : 'bg-milk-300 hover:bg-milk-400/60'
       }`}
-      animate={{
-        rotateX: isSelected ? 0 : 2,
-        translateZ: isSelected ? 0 : 12,
-        boxShadow: isSelected
-          ? '0 1px 2px 0 rgba(44, 37, 35, 0.04)'
-          : '0 4px 16px 0 rgba(44, 37, 35, 0.07), 0 1px 3px 0 rgba(44, 37, 35, 0.04)',
-      }}
-      whileHover={{
-        scale: 0.985,
-        ...(isSelected
-          ? {
-              boxShadow: '0 1px 3px 0 rgba(44, 37, 35, 0.05)',
-            }
-          : {
-              rotateX: 0,
-              translateZ: 6,
-              boxShadow: '0 2px 8px 0 rgba(44, 37, 35, 0.06)',
-            }),
-      }}
+      whileHover={{ scale: 0.985 }}
       whileTap={{ scale: 0.975 }}
       transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-      style={{ transformStyle: 'preserve-3d' }}
     >
-      <div
-        className={`flex size-12 shrink-0 items-center justify-center rounded-full border font-korean ${
-          deck.nextReviewVocab && deck.nextReviewVocab.length > 2
-            ? 'text-xs'
-            : 'text-lg'
-        } ${GLYPH_COLORS[idx]}`}
-      >
-        {deck.nextReviewVocab ?? deck.name.charAt(0).toUpperCase()}
-      </div>
-
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-ink-900 truncate">
           {deck.name}
