@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { Volume2 } from 'lucide-react';
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 
 export interface CardDismiss {
   direction: 'left' | 'right';
@@ -49,6 +49,11 @@ export function ReviewCard({
   const aSize = answerSize(answer);
   const backQSize = questionSize(question).replace('text-6xl', 'text-4xl');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+  }, [cardId]);
 
   const playAudio = useCallback(
     (e: React.MouseEvent) => {
