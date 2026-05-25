@@ -98,8 +98,7 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
           : {
               rotateX: 0,
               translateZ: 6,
-              boxShadow:
-                '0 2px 8px 0 rgba(44, 37, 35, 0.06)',
+              boxShadow: '0 2px 8px 0 rgba(44, 37, 35, 0.06)',
             }),
       }}
       whileTap={{ scale: 0.975 }}
@@ -107,9 +106,13 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
       style={{ transformStyle: 'preserve-3d' }}
     >
       <div
-        className={`flex size-12 shrink-0 items-center justify-center rounded-full border text-lg font-display ${GLYPH_COLORS[idx]}`}
+        className={`flex size-12 shrink-0 items-center justify-center rounded-full border font-korean ${
+          deck.nextReviewVocab && deck.nextReviewVocab.length > 2
+            ? 'text-xs'
+            : 'text-lg'
+        } ${GLYPH_COLORS[idx]}`}
       >
-        {deck.name.charAt(0).toUpperCase()}
+        {deck.nextReviewVocab ?? deck.name.charAt(0).toUpperCase()}
       </div>
 
       <div className="min-w-0 flex-1">
@@ -139,8 +142,7 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
               <Tooltip.Popup className="z-50 w-44 rounded-md bg-[#3a7a5a] px-2.5 py-1.5 text-[10px] leading-snug text-white shadow-medium">
                 <span className="font-semibold">Mastery at {mastery}%</span>
                 <br />
-                Percentage of cards with a review interval of 12 weeks or
-                more.
+                Percentage of cards with a review interval of 12 weeks or more.
                 <Tooltip.Arrow className="fill-[#3a7a5a]" />
               </Tooltip.Popup>
             </Tooltip.Positioner>

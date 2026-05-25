@@ -7,6 +7,7 @@ export const DeckStatsItemSchema = z.object({
   reviewCount: z.number(),
   totalCards: z.number(),
   matureCards: z.number(),
+  nextReviewVocab: z.string().nullable(),
 });
 
 export const DeckStatsSchema = z.object({

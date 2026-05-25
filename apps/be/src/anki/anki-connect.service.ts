@@ -69,7 +69,10 @@ export class AnkiConnectService {
         const s =
           statsMap[name] ??
           Object.values(statsMap).find((v) => v.name === name);
-        const matureCards = await this.countMatureCards(name);
+        const [matureCards, nextReviewVocab] = await Promise.all([
+          this.countMatureCards(name),
+          this.getNextDueVocab(name),
+        ]);
 
         return {
           name,
@@ -78,6 +81,7 @@ export class AnkiConnectService {
           reviewCount: s?.review_count ?? 0,
           totalCards: s?.total_in_deck ?? 0,
           matureCards,
+          nextReviewVocab,
         };
       }),
     );
@@ -147,6 +151,24 @@ export class AnkiConnectService {
       decks: [deckName],
       cardsToo,
     });
+  }
+
+  async getNextDueVocab(deckName: string): Promise<string | null> {
+    const cardIds = await this.invoke<number[]>('findCards', {
+      query: `deck:"${deckName}" is:due`,
+    });
+    if (cardIds.length === 0) return null;
+
+    const infos = await this.invoke<
+      { fields: Record<string, { value: string }> }[]
+    >('cardsInfo', { cards: [cardIds[0]] });
+
+    if (infos.length === 0) return null;
+    const fields = infos[0].fields;
+    const front =
+      fields['Front']?.value ?? Object.values(fields)[0]?.value ?? null;
+    if (!front) return null;
+    return front.replace(/<[^>]*>/g, '').trim() || null;
   }
 
   private async countMatureCards(deckName: string): Promise<number> {

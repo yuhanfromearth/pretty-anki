@@ -7,7 +7,11 @@ interface DeckListProps {
   onSelectDeck?: (name: string) => void;
 }
 
-export function DeckList({ deckStats, selectedDeck, onSelectDeck }: DeckListProps) {
+export function DeckList({
+  deckStats,
+  selectedDeck,
+  onSelectDeck,
+}: DeckListProps) {
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex shrink-0 items-center justify-between">
@@ -16,7 +20,10 @@ export function DeckList({ deckStats, selectedDeck, onSelectDeck }: DeckListProp
         </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto" style={{ perspective: 800 }}>
+      <div
+        className="min-h-0 flex-1 overflow-y-auto"
+        style={{ perspective: 800 }}
+      >
         <div className="grid gap-2">
           {deckStats.decks.map((deck) => (
             <DeckRow

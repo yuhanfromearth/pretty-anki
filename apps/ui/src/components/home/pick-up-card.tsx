@@ -44,8 +44,14 @@ export function PickUpCard({ deck }: PickUpCardProps) {
           </button>
         </div>
         <div className="flex flex-col items-center gap-2">
-          <div className="flex size-20 items-center justify-center rounded-full bg-milk-200/80 border border-milk-300/60 text-3xl font-display text-ink-700">
-            {deck.name.charAt(0).toUpperCase()}
+          <div
+            className={`flex size-20 items-center justify-center rounded-full bg-milk-200/80 border border-milk-300/60 font-korean text-ink-700 ${
+              deck.nextReviewVocab && deck.nextReviewVocab.length > 2
+                ? 'text-lg'
+                : 'text-3xl'
+            }`}
+          >
+            {deck.nextReviewVocab ?? deck.name.charAt(0).toUpperCase()}
           </div>
           <span className="font-display text-5xl font-bold tracking-tight text-ink-900">
             {dueNow}

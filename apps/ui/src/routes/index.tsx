@@ -80,7 +80,11 @@ function HomePage() {
       {displayDeck && <PickUpCard deck={displayDeck} />}
 
       {deckStats.data && deckStats.data.decks.length > 0 && (
-        <DeckList deckStats={deckStats.data} selectedDeck={selectedDeck} onSelectDeck={setSelectedDeck} />
+        <DeckList
+          deckStats={deckStats.data}
+          selectedDeck={selectedDeck}
+          onSelectDeck={setSelectedDeck}
+        />
       )}
     </div>
   );
