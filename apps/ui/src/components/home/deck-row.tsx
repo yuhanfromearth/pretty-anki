@@ -88,7 +88,7 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
             className="group/mastery flex items-center gap-0.5 w-20 cursor-default"
             render={<div />}
           >
-            <div className="h-1.5 w-12 rounded-full bg-milk-400 overflow-hidden">
+            <div className={`h-1.5 w-12 rounded-full overflow-hidden ${isSelected ? 'bg-milk-500' : 'bg-milk-400'}`}>
               <div
                 className={`h-full rounded-full ${MASTERY_COLORS[idx]} transition-all`}
                 style={{ width: `${mastery}%` }}
@@ -103,7 +103,8 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
               <Tooltip.Popup className="z-50 w-44 rounded-md bg-[#3a7a5a] px-2.5 py-1.5 text-[10px] leading-snug text-white shadow-medium">
                 <span className="font-semibold">Mastery at {mastery}%</span>
                 <br />
-                Percentage of cards with a review interval of 12 weeks or more.
+                {deck.matureCards}/{deck.totalCards} cards in this deck have a
+                review interval of 12 weeks or more.
                 <Tooltip.Arrow className="fill-[#3a7a5a]" />
               </Tooltip.Popup>
             </Tooltip.Positioner>
