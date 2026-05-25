@@ -10,33 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReviewDeckNameRouteImport } from './routes/review.$deckName'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReviewDeckNameRoute = ReviewDeckNameRouteImport.update({
+  id: '/review/$deckName',
+  path: '/review/$deckName',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/review/$deckName': typeof ReviewDeckNameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/review/$deckName': typeof ReviewDeckNameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/review/$deckName': typeof ReviewDeckNameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/review/$deckName'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/review/$deckName'
+  id: '__root__' | '/' | '/review/$deckName'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ReviewDeckNameRoute: typeof ReviewDeckNameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +58,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/review/$deckName': {
+      id: '/review/$deckName'
+      path: '/review/$deckName'
+      fullPath: '/review/$deckName'
+      preLoaderRoute: typeof ReviewDeckNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ReviewDeckNameRoute: ReviewDeckNameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

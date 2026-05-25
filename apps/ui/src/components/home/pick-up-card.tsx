@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { ArrowRight } from 'lucide-react';
 import type { DeckStatsItem } from '@nts/dtos';
 
@@ -38,10 +39,14 @@ export function PickUpCard({ deck }: PickUpCardProps) {
               </span>
             )}
           </div>
-          <button className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-mint-500 px-5 py-2.5 text-sm font-medium text-white dark:text-cocoa-950 shadow-soft transition-colors hover:bg-mint-700">
+          <Link
+            to="/review/$deckName"
+            params={{ deckName: deck.name }}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-mint-500 px-5 py-2.5 text-sm font-medium text-white dark:text-cocoa-950 shadow-soft transition-colors hover:bg-mint-700"
+          >
             Start review
             <ArrowRight className="size-4" />
-          </button>
+          </Link>
         </div>
         <div className="flex flex-col items-center gap-2">
           <div

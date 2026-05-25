@@ -1,10 +1,41 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useMatches } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Sun, Moon, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Streak } from '@nts/dtos';
 import { SettingsDialog } from '#/components/settings-dialog';
+
+function Breadcrumb() {
+  const matches = useMatches();
+  const segments: string[] = [];
+  for (const m of matches) {
+    if (m.routeId === '__root__' || m.routeId === '/') continue;
+    const parts = m.routeId.split('/').filter(Boolean);
+    for (const part of parts) {
+      if (part.startsWith('$')) {
+        const paramName = part.slice(1);
+        const value = (m.params as Record<string, string>)[paramName];
+        if (value) segments.push(decodeURIComponent(value));
+      } else {
+        segments.push(part);
+      }
+    }
+  }
+  if (segments.length === 0) {
+    return <span className="text-xs font-medium text-ink-300">home</span>;
+  }
+  return (
+    <span className="flex items-center gap-1.5 text-xs font-medium text-ink-300 truncate max-w-60">
+      {segments.map((seg, i) => (
+        <span key={i} className="flex items-center gap-1.5">
+          {i > 0 && <span className="text-milk-300">&gt;</span>}
+          <span>{seg}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export function Header() {
   const [dark, setDark] = useState(false);
@@ -86,7 +117,7 @@ export function Header() {
             </span>
           </Link>
           <span className="text-milk-300">|</span>
-          <span className="text-xs font-medium text-ink-300">home</span>
+          <Breadcrumb />
         </nav>
 
         <div className="ml-auto flex items-center gap-1">

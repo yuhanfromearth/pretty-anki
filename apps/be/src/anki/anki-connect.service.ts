@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { DeckStats, DeckStatsItem, Streak, ReviewPace } from '@nts/dtos';
+import type {
+  DeckStats,
+  DeckStatsItem,
+  Streak,
+  ReviewPace,
+  ReviewCard,
+  ReviewSession,
+} from '@nts/dtos';
 
 interface AnkiDeckStats {
   deck_id: number;
@@ -169,6 +176,66 @@ export class AnkiConnectService {
       fields['Front']?.value ?? Object.values(fields)[0]?.value ?? null;
     if (!front) return null;
     return front.replace(/<[^>]*>/g, '').trim() || null;
+  }
+
+  async startReview(deckName: string): Promise<ReviewSession> {
+    await this.invoke<boolean>('guiDeckReview', { name: deckName });
+    const stats = await this.invoke<Record<string, AnkiDeckStats>>(
+      'getDeckStats',
+      { decks: [deckName] },
+    );
+    const s = Object.values(stats)[0];
+    const remaining = s ? s.new_count + s.learn_count + s.review_count : 0;
+    return { remaining };
+  }
+
+  async getCurrentCard(): Promise<ReviewCard | null> {
+    try {
+      const card = await this.invoke<{
+        cardId: number;
+        fields: Record<string, { value: string; order: number }>;
+        deckName: string;
+        buttons: number[];
+        nextReviews: string[];
+      } | null>('guiCurrentCard');
+      if (!card) return null;
+
+      const fieldEntries = Object.entries(card.fields).sort(
+        ([, a], [, b]) => a.order - b.order,
+      );
+      const question = this.stripHtml(fieldEntries[0]?.[1]?.value ?? '');
+      const answer = this.stripHtml(fieldEntries[1]?.[1]?.value ?? '');
+
+      return {
+        cardId: card.cardId,
+        question,
+        answer,
+        deckName: card.deckName,
+        buttons: card.buttons,
+        nextReviews: card.nextReviews ?? [],
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async showAnswer(): Promise<boolean> {
+    return this.invoke<boolean>('guiShowAnswer');
+  }
+
+  async answerCard(ease: number): Promise<boolean> {
+    return this.invoke<boolean>('guiAnswerCard', { ease });
+  }
+
+  async rescheduleCard(cardId: number, days: number): Promise<void> {
+    await this.invoke<void>('setDueDate', {
+      cards: [cardId],
+      days: String(days),
+    });
+  }
+
+  private stripHtml(html: string): string {
+    return html.replace(/<[^>]*>/g, '').trim();
   }
 
   private async countMatureCards(deckName: string): Promise<number> {
