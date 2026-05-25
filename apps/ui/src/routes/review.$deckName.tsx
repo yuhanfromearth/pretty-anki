@@ -11,6 +11,12 @@ export const Route = createFileRoute('/review/$deckName')({
   component: ReviewPage,
 });
 
+async function safeJson<T>(r: Response): Promise<T> {
+  const text = await r.text();
+  if (!text) return null as T;
+  return JSON.parse(text) as T;
+}
+
 async function postJson<T>(url: string, body?: unknown): Promise<T> {
   const r = await fetch(url, {
     method: 'POST',
@@ -18,13 +24,13 @@ async function postJson<T>(url: string, body?: unknown): Promise<T> {
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!r.ok) throw new Error(`${url}: ${r.status}`);
-  return r.json() as Promise<T>;
+  return safeJson<T>(r);
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`${url}: ${r.status}`);
-  return r.json() as Promise<T>;
+  return safeJson<T>(r);
 }
 
 type Phase = 'loading' | 'question' | 'answer' | 'done' | 'error';
@@ -228,7 +234,7 @@ function ReviewPage() {
     <div className="flex h-full flex-col gap-6">
       <ReviewProgress reviewed={reviewed} total={total} medianMs={medianMs} />
 
-      <div className="mx-auto w-full max-w-xl pt-4">
+      <div className="mx-auto w-full max-w-2xl pt-4">
         <ReviewCard
           cardId={card.cardId}
           question={card.question}

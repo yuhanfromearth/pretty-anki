@@ -14,6 +14,25 @@ interface ReviewCardProps {
   onFlip: () => void;
 }
 
+function textLength(html: string): number {
+  return html.replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, ' ').length;
+}
+
+function questionSize(text: string): string {
+  const len = textLength(text);
+  if (len > 200) return 'text-lg';
+  if (len > 100) return 'text-2xl';
+  if (len > 40) return 'text-4xl';
+  return 'text-6xl';
+}
+
+function answerSize(text: string): string {
+  const len = textLength(text);
+  if (len > 200) return 'text-base';
+  if (len > 100) return 'text-lg';
+  return 'text-2xl';
+}
+
 export function ReviewCard({
   cardId,
   question,
@@ -22,6 +41,10 @@ export function ReviewCard({
   dismiss,
   onFlip,
 }: ReviewCardProps) {
+  const qSize = questionSize(question);
+  const aSize = answerSize(answer);
+  const backQSize = questionSize(question).replace('text-6xl', 'text-4xl');
+
   return (
     <motion.div
       key={cardId}
@@ -51,21 +74,22 @@ export function ReviewCard({
         transition={{ duration: 0.08 }}
       />
       <motion.div
-        className="relative h-80 w-full"
+        className="relative grid min-h-96 w-full"
         style={{ transformStyle: 'preserve-3d' }}
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       >
         {/* Front — question */}
         <div
-          className="absolute inset-0 overflow-hidden rounded-3xl border border-milk-200/60 bg-milk-50/95 shadow-medium"
+          className="col-start-1 row-start-1 overflow-hidden rounded-3xl border border-milk-200/60 bg-milk-50/95 shadow-medium"
           style={{ backfaceVisibility: 'hidden' }}
         >
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(234,219,200,0.3)_0%,transparent_60%)] dark:bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(247,236,210,0.05)_0%,transparent_60%)]" />
-          <div className="relative flex h-full flex-col items-center justify-center px-10">
-            <p className="text-center font-korean text-6xl leading-tight text-ink-900">
-              {question}
-            </p>
+          <div className="relative flex h-full flex-col items-center justify-center px-10 py-10">
+            <div
+              className={`text-center font-korean ${qSize} leading-tight text-ink-900`}
+              dangerouslySetInnerHTML={{ __html: question }}
+            />
             <span className="mt-8 text-[10.5px] font-medium uppercase tracking-[0.14em] text-ink-300">
               tap to reveal
             </span>
@@ -74,17 +98,18 @@ export function ReviewCard({
 
         {/* Back — answer */}
         <div
-          className="absolute inset-0 overflow-hidden rounded-3xl border border-milk-200/60 bg-milk-50/95 shadow-medium"
+          className="col-start-1 row-start-1 overflow-hidden rounded-3xl border border-milk-200/60 bg-milk-50/95 shadow-medium"
           style={{
             backfaceVisibility: 'hidden',
             transform: 'rotateY(180deg)',
           }}
         >
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(127,179,154,0.1)_0%,transparent_55%)] dark:bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(90,153,120,0.05)_0%,transparent_55%)]" />
-          <div className="relative flex h-full flex-col items-center justify-center px-10">
-            <p className="text-center font-korean text-6xl leading-tight text-ink-900">
-              {question}
-            </p>
+          <div className="relative flex h-full flex-col items-center justify-center px-10 py-10">
+            <div
+              className={`text-center font-korean ${backQSize} leading-tight text-ink-900`}
+              dangerouslySetInnerHTML={{ __html: question }}
+            />
 
             <div className="mx-auto mt-6 mb-5 h-px w-24 bg-milk-300/80" />
 
@@ -92,9 +117,10 @@ export function ReviewCard({
               meaning
             </span>
 
-            <p className="mt-3 text-center font-display text-2xl font-medium text-ink-900">
-              {answer}
-            </p>
+            <div
+              className={`mt-3 text-center font-display ${aSize} font-medium text-ink-900`}
+              dangerouslySetInnerHTML={{ __html: answer }}
+            />
           </div>
         </div>
       </motion.div>
