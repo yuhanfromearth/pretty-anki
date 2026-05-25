@@ -108,12 +108,12 @@ function ReviewPage() {
 
   const advanceCard = useCallback(async (countsAsProgress: boolean) => {
     if (countsAsProgress) setReviewed((r) => r + 1);
-    setDismiss(null);
-    dismissing.current = false;
     try {
       const next = await fetchJson<ReviewCardType | null>(
         '/api/anki/review/current'
       );
+      setDismiss(null);
+      dismissing.current = false;
       if (!next) {
         setPhase('done');
         return;
@@ -122,6 +122,8 @@ function ReviewPage() {
       setFlipped(false);
       setPhase('question');
     } catch {
+      setDismiss(null);
+      dismissing.current = false;
       setPhase('done');
     }
   }, []);

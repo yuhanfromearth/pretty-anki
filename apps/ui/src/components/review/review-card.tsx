@@ -129,6 +129,9 @@ export function ReviewCard({
             <span className="mt-8 text-[10.5px] font-medium uppercase tracking-[0.14em] text-ink-300">
               tap to reveal
             </span>
+            <span className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] font-mono text-ink-900/60">
+              {cardId}
+            </span>
           </div>
         </div>
 
@@ -165,6 +168,9 @@ export function ReviewCard({
               className={`mt-3 text-center font-display ${aSize} font-medium text-ink-900`}
               dangerouslySetInnerHTML={{ __html: answer }}
             />
+            <span className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] font-mono text-ink-900/60">
+              {cardId}
+            </span>
           </div>
         </div>
       </motion.div>
