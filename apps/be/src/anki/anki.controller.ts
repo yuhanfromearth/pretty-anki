@@ -1,4 +1,12 @@
-import { Controller, Delete, Get, Param } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Res,
+} from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiOperation,
   ApiOkResponse,
@@ -53,6 +61,32 @@ export class AnkiController {
     } catch {
       return { connected: false };
     }
+  }
+
+  @Get('media/:filename')
+  @ApiOperation({ summary: 'Retrieve a media file from Anki collection' })
+  @ApiParam({ name: 'filename', description: 'Media filename' })
+  @ApiOkResponse({ description: 'Media file binary' })
+  async getMedia(@Param('filename') filename: string, @Res() res: Response) {
+    const buf = await this.anki.getMediaFile(filename);
+    if (!buf) throw new NotFoundException('Media file not found');
+
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const mime =
+      ext === 'mp3'
+        ? 'audio/mpeg'
+        : ext === 'ogg'
+          ? 'audio/ogg'
+          : ext === 'wav'
+            ? 'audio/wav'
+            : 'application/octet-stream';
+
+    res.set({
+      'Content-Type': mime,
+      'Content-Length': buf.length.toString(),
+      'Cache-Control': 'public, max-age=86400',
+    });
+    res.send(buf);
   }
 
   @Delete('decks/:name')

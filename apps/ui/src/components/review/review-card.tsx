@@ -1,4 +1,6 @@
 import { motion } from 'motion/react';
+import { Volume2 } from 'lucide-react';
+import { useRef, useCallback } from 'react';
 
 export interface CardDismiss {
   direction: 'left' | 'right';
@@ -9,6 +11,7 @@ interface ReviewCardProps {
   cardId: number;
   question: string;
   answer: string;
+  audio: string[];
   flipped: boolean;
   dismiss: CardDismiss | null;
   onFlip: () => void;
@@ -37,6 +40,7 @@ export function ReviewCard({
   cardId,
   question,
   answer,
+  audio,
   flipped,
   dismiss,
   onFlip,
@@ -44,6 +48,25 @@ export function ReviewCard({
   const qSize = questionSize(question);
   const aSize = answerSize(answer);
   const backQSize = questionSize(question).replace('text-6xl', 'text-4xl');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const playAudio = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!audio.length) return;
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play();
+        return;
+      }
+      const el = new Audio(`/api/anki/media/${encodeURIComponent(audio[0])}`);
+      audioRef.current = el;
+      el.play();
+    },
+    [audio]
+  );
+
+  const hasAudio = audio.length > 0;
 
   return (
     <motion.div
@@ -90,6 +113,14 @@ export function ReviewCard({
               className={`text-center font-korean ${qSize} leading-tight text-ink-900`}
               dangerouslySetInnerHTML={{ __html: question }}
             />
+            {hasAudio && (
+              <button
+                onClick={playAudio}
+                className="mt-6 flex size-10 items-center justify-center rounded-full border border-milk-300/80 bg-milk-100/80 text-ink-400 transition-colors hover:bg-milk-200 hover:text-ink-600 active:scale-95"
+              >
+                <Volume2 className="size-4" />
+              </button>
+            )}
             <span className="mt-8 text-[10.5px] font-medium uppercase tracking-[0.14em] text-ink-300">
               tap to reveal
             </span>
@@ -110,6 +141,14 @@ export function ReviewCard({
               className={`text-center font-korean ${backQSize} leading-tight text-ink-900`}
               dangerouslySetInnerHTML={{ __html: question }}
             />
+            {hasAudio && (
+              <button
+                onClick={playAudio}
+                className="mt-4 flex size-9 items-center justify-center rounded-full border border-milk-300/80 bg-milk-100/80 text-ink-400 transition-colors hover:bg-milk-200 hover:text-ink-600 active:scale-95"
+              >
+                <Volume2 className="size-3.5" />
+              </button>
+            )}
 
             <div className="mx-auto mt-6 mb-5 h-px w-24 bg-milk-300/80" />
 

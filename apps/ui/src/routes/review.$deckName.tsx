@@ -95,11 +95,6 @@ function ReviewPage() {
   }, [startSession]);
 
   const handleFlip = useCallback(async () => {
-    if (phase === 'answer') {
-      setFlipped(false);
-      setPhase('question');
-      return;
-    }
     if (phase !== 'question') return;
     try {
       await postJson('/api/anki/review/show-answer');
@@ -136,11 +131,10 @@ function ReviewPage() {
       if (dismissing.current || !card) return;
       dismissing.current = true;
 
-      const direction = ease >= 3 ? 'right' : 'left';
-      setDismiss({ direction, color: DISMISS_COLOR[ease] ?? DISMISS_COLOR[3] });
-
       const nextReview = card.nextReviews[buttonIndex] ?? '';
       const countsAsProgress = !isShortInterval(nextReview);
+      const direction = isShortInterval(nextReview) ? 'left' : 'right';
+      setDismiss({ direction, color: DISMISS_COLOR[ease] ?? DISMISS_COLOR[3] });
 
       setTimeout(async () => {
         try {
@@ -169,6 +163,12 @@ function ReviewPage() {
         return;
       }
       if (phase !== 'answer' || !card) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const idx = card.buttons.indexOf(3);
+        if (idx !== -1) handleAnswer(3, idx);
+        return;
+      }
       const num = parseInt(e.key, 10);
       if (num >= 1 && num <= 4) {
         const idx = card.buttons.indexOf(num);
@@ -239,6 +239,7 @@ function ReviewPage() {
           cardId={card.cardId}
           question={card.question}
           answer={card.answer}
+          audio={card.audio}
           flipped={flipped}
           dismiss={dismiss}
           onFlip={handleFlip}

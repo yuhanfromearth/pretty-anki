@@ -7,6 +7,7 @@ export const ReviewCardSchema = z.object({
   deckName: z.string(),
   buttons: z.array(z.number().int().min(1).max(4)),
   nextReviews: z.array(z.string()),
+  audio: z.array(z.string()),
 });
 
 export const AnswerCardSchema = z.object({

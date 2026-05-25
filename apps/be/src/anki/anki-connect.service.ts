@@ -66,9 +66,8 @@ export class AnkiConnectService {
 
   async getDeckStats(): Promise<DeckStats> {
     const deckNames = await this.getDecks();
-    const nameToId = await this.invoke<Record<string, number>>(
-      'deckNamesAndIds',
-    );
+    const nameToId =
+      await this.invoke<Record<string, number>>('deckNamesAndIds');
     const statsMap = await this.invoke<Record<string, AnkiDeckStats>>(
       'getDeckStats',
       { decks: deckNames },
@@ -205,6 +204,7 @@ export class AnkiConnectService {
       const fieldEntries = Object.entries(card.fields).sort(
         ([, a], [, b]) => a.order - b.order,
       );
+      const audio = fieldEntries.flatMap(([, f]) => this.extractAudio(f.value));
       const question = this.stripHtml(fieldEntries[0]?.[1]?.value ?? '');
       const answer = this.stripHtml(fieldEntries[1]?.[1]?.value ?? '');
 
@@ -215,6 +215,7 @@ export class AnkiConnectService {
         deckName: card.deckName,
         buttons: card.buttons,
         nextReviews: card.nextReviews ?? [],
+        audio,
       };
     } catch {
       return null;
@@ -236,8 +237,24 @@ export class AnkiConnectService {
     });
   }
 
+  async getMediaFile(filename: string): Promise<Buffer | null> {
+    const b64 = await this.invoke<string | null>('retrieveMediaFile', {
+      filename,
+    });
+    if (!b64) return null;
+    return Buffer.from(b64, 'base64');
+  }
+
+  private extractAudio(html: string): string[] {
+    const matches = [...html.matchAll(/\[sound:([^\]]+)]/g)];
+    return matches.map((m) => m[1]);
+  }
+
   private stripHtml(html: string): string {
-    return html.replace(/<[^>]*>/g, '').trim();
+    return html
+      .replace(/\[sound:[^\]]+]/g, '')
+      .replace(/<[^>]*>/g, '')
+      .trim();
   }
 
   private async countMatureCards(deckName: string): Promise<number> {
