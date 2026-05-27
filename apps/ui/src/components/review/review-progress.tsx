@@ -19,26 +19,45 @@ export function ReviewProgress({
   return (
     <div className="space-y-2">
       {total > 150 ? (
-        <div className="h-2 overflow-hidden rounded-full bg-milk-400/60">
+        <div className="relative h-2 overflow-hidden rounded-full bg-milk-400/60">
           <div
             className="h-full rounded-full bg-mint-500 transition-all duration-500 ease-out"
             style={{ width: `${total > 0 ? (reviewed / total) * 100 : 0}%` }}
           />
+          {total > 10 &&
+            Array.from(
+              { length: Math.floor((total - 1) / 5) },
+              (_, i) => {
+                const pos = ((i + 1) * 5) / total * 100;
+                return (
+                  <div
+                    key={i}
+                    className="absolute top-0 h-full w-px bg-black/10 dark:bg-white/15"
+                    style={{ left: `${pos}%` }}
+                  />
+                );
+              }
+            )}
         </div>
       ) : (
-        <div className="flex gap-1">
+        <div className={`flex gap-1 ${total > 10 ? 'items-end' : ''}`}>
           {Array.from({ length: total }, (_, i) => {
             const isFilled = i < reviewed;
             const isCurrent = i === reviewed;
+            const isFifth = total > 10 && (i + 1) % 5 === 0;
             return (
               <div
                 key={i}
-                className={`h-2 flex-1 rounded-sm transition-colors duration-300 ${
+                className={`${isFifth ? 'h-3' : 'h-2'} flex-1 rounded-sm transition-colors duration-300 ${
                   isFilled
-                    ? 'bg-mint-500'
+                    ? isFifth
+                      ? 'bg-mint-600 dark:bg-mint-400'
+                      : 'bg-mint-500'
                     : isCurrent
                       ? 'bg-mint-300'
-                      : 'bg-milk-400/60'
+                      : isFifth
+                        ? 'bg-milk-500/60 dark:bg-milk-300/60'
+                        : 'bg-milk-400/60'
                 }`}
               />
             );
