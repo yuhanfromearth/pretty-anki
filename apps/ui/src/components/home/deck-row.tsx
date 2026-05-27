@@ -68,9 +68,7 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
     <motion.div
       onClick={onClick}
       className={`group flex items-center gap-3 rounded-md px-3 py-2 cursor-pointer transition-colors ${
-        isSelected
-          ? 'bg-milk-400'
-          : 'bg-milk-300 hover:bg-milk-400/60'
+        isSelected ? 'bg-mint-500' : 'bg-milk-300 hover:bg-milk-400/60'
       }`}
       whileHover={{ scale: 0.985 }}
       whileTap={{ scale: 0.975 }}
@@ -88,13 +86,13 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
             className="group/mastery flex items-center gap-0.5 w-20 cursor-default"
             render={<div />}
           >
-            <div className={`h-1.5 w-12 rounded-full overflow-hidden ${isSelected ? 'bg-milk-500' : 'bg-milk-400'}`}>
+            <div className="h-1.5 w-12 rounded-full overflow-hidden bg-milk-400">
               <div
                 className={`h-full rounded-full ${MASTERY_COLORS[idx]} transition-all`}
                 style={{ width: `${mastery}%` }}
               />
             </div>
-            <span className="font-mono text-xs text-ink-300 w-8 text-right transition-colors group-hover/mastery:text-ink-500">
+            <span className={`font-mono text-xs w-8 text-right transition-colors ${isSelected ? 'text-white dark:text-cocoa-950' : 'text-ink-300 group-hover/mastery:text-ink-500'}`}>
               {mastery}%
             </span>
           </Tooltip.Trigger>
@@ -114,7 +112,7 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
 
       <div className="w-14 text-right">
         {isClear ? (
-          <span className="inline-flex items-center gap-0.5 text-xs font-medium text-ink-300">
+          <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isSelected ? 'text-white dark:text-cocoa-950' : 'text-ink-300'}`}>
             <Check className="size-3" />
             clear
           </span>
