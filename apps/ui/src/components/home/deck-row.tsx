@@ -174,9 +174,18 @@ export function DeckRow({
           className="max-w-sm"
         >
           <DialogTitle className="text-base font-semibold text-ink-900">
-            Delete &ldquo;{deck.name}&rdquo;?
+            Delete deck?
           </DialogTitle>
-          <DialogDescription className="mt-1.5 text-sm text-ink-500">
+
+          <div className="mt-2.5 inline-flex items-center gap-2 rounded-md bg-terra/8 border border-terra/15 px-3 py-2">
+            <span className="font-display text-sm font-semibold text-terra">
+              {deck.name}
+            </span>
+            <span className="text-terra/60 text-xs">→</span>
+            <span>🗑️</span>
+          </div>
+
+          <DialogDescription className="mt-2.5 text-sm text-ink-500">
             This will permanently delete the deck
             {subDeckCount > 0 && (
               <>
