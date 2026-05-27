@@ -1,7 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
-import type { ReviewCard as ReviewCardType, ReviewPace } from '@nts/dtos';
+import type {
+  ReviewCard as ReviewCardType,
+  ReviewPace,
+  UserSettings,
+} from '@nts/dtos';
 import { ReviewCard, type CardDismiss } from '#/components/review/review-card';
 import { AnswerBar } from '#/components/review/answer-bar';
 import { ReviewProgress } from '#/components/review/review-progress';
@@ -60,6 +65,16 @@ function ReviewPage() {
   const [medianMs, setMedianMs] = useState<number | undefined>();
   const [dismiss, setDismiss] = useState<CardDismiss | null>(null);
   const dismissing = useRef(false);
+
+  const settingsQuery = useQuery<UserSettings>({
+    queryKey: ['user-settings'],
+    queryFn: async () => {
+      const r = await fetch('/api/settings');
+      if (!r.ok) throw new Error(`settings: ${r.status}`);
+      return r.json() as Promise<UserSettings>;
+    },
+  });
+  const cardTilt = settingsQuery.data?.cardTilt ?? true;
 
   const startSession = useCallback(async () => {
     try {
@@ -244,6 +259,7 @@ function ReviewPage() {
           audio={card.audio}
           flipped={flipped}
           dismiss={dismiss}
+          tilt={cardTilt}
           onFlip={handleFlip}
         />
 

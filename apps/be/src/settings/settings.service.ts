@@ -10,6 +10,7 @@ const SETTINGS_FILE = join(SETTINGS_DIR, 'settings.json');
 const DEFAULT_SETTINGS: UserSettings = {
   displayName: null,
   avatar: null,
+  cardTilt: true,
 };
 
 @Injectable()

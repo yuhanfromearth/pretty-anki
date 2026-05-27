@@ -19,7 +19,7 @@ export function ReviewProgress({
   return (
     <div className="space-y-2">
       {total > 150 ? (
-        <div className="h-2 overflow-hidden rounded-full bg-milk-300/60">
+        <div className="h-2 overflow-hidden rounded-full bg-milk-400/60">
           <div
             className="h-full rounded-full bg-mint-500 transition-all duration-500 ease-out"
             style={{ width: `${total > 0 ? (reviewed / total) * 100 : 0}%` }}
@@ -38,7 +38,7 @@ export function ReviewProgress({
                     ? 'bg-mint-500'
                     : isCurrent
                       ? 'bg-mint-300'
-                      : 'bg-milk-300/60'
+                      : 'bg-milk-400/60'
                 }`}
               />
             );

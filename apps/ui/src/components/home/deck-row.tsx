@@ -92,7 +92,9 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
                 style={{ width: `${mastery}%` }}
               />
             </div>
-            <span className={`font-mono text-xs w-8 text-right transition-colors ${isSelected ? 'text-white dark:text-cocoa-950' : 'text-ink-300 group-hover/mastery:text-ink-500'}`}>
+            <span
+              className={`font-mono text-xs w-8 text-right transition-colors ${isSelected ? 'text-white dark:text-cocoa-950' : 'text-ink-300 group-hover/mastery:text-ink-500'}`}
+            >
               {mastery}%
             </span>
           </Tooltip.Trigger>
@@ -112,7 +114,9 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
 
       <div className="w-14 text-right">
         {isClear ? (
-          <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isSelected ? 'text-white dark:text-cocoa-950' : 'text-ink-300'}`}>
+          <span
+            className={`inline-flex items-center gap-0.5 text-xs font-medium ${isSelected ? 'text-white dark:text-cocoa-950' : 'text-ink-300'}`}
+          >
             <Check className="size-3" />
             clear
           </span>

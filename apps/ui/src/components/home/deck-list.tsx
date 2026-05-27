@@ -8,7 +8,13 @@ import {
   PopoverTrigger,
 } from '#/components/ui/popover';
 
-type SortKey = 'reviews-desc' | 'reviews-asc' | 'mastery-desc' | 'mastery-asc' | 'alpha-asc' | 'alpha-desc';
+type SortKey =
+  | 'reviews-desc'
+  | 'reviews-asc'
+  | 'mastery-desc'
+  | 'mastery-asc'
+  | 'alpha-asc'
+  | 'alpha-desc';
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'reviews-desc', label: 'Reviews: high → low' },
@@ -71,17 +77,11 @@ export function DeckList({
           all decks
         </span>
         <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger
-            className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-[10.5px] font-semibold tracking-wide uppercase text-ink-300 transition-colors hover:text-ink-500"
-          >
+          <PopoverTrigger className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-[10.5px] font-semibold tracking-wide uppercase text-ink-300 transition-colors hover:text-ink-500">
             <SortIcon className="size-3" />
             {activeLabel}
           </PopoverTrigger>
-          <PopoverContent
-            align="end"
-            sideOffset={6}
-            className="w-48 p-1"
-          >
+          <PopoverContent align="end" sideOffset={6} className="w-48 p-1">
             {SORT_OPTIONS.map((opt) => (
               <button
                 key={opt.key}

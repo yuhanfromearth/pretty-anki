@@ -37,11 +37,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   const [displayName, setDisplayName] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [cardTilt, setCardTilt] = useState(true);
 
   useEffect(() => {
     if (open && settings.data) {
       setDisplayName(settings.data.displayName ?? '');
       setAvatar(settings.data.avatar ?? null);
+      setCardTilt(settings.data.cardTilt ?? true);
     }
   }, [open, settings.data]);
 
@@ -94,6 +96,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     mutation.mutate({
       displayName: displayName.trim() || null,
       avatar,
+      cardTilt,
     });
   };
 
@@ -169,6 +172,24 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="How should we greet you?"
             />
+          </div>
+
+          <div className="w-full flex items-center justify-between">
+            <Label htmlFor="card-tilt" className="text-ink-600">
+              3D card tilt
+            </Label>
+            <button
+              id="card-tilt"
+              type="button"
+              role="switch"
+              aria-checked={cardTilt}
+              onClick={() => setCardTilt((v) => !v)}
+              className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 ${cardTilt ? 'bg-mint-500' : 'bg-milk-300'}`}
+            >
+              <span
+                className={`pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform ${cardTilt ? 'translate-x-4' : 'translate-x-0'}`}
+              />
+            </button>
           </div>
 
           <Button
