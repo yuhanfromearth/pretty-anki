@@ -103,7 +103,9 @@ export function DeckRow({
             className="group/mastery flex items-center gap-0.5 w-20 cursor-default"
             render={<div />}
           >
-            <div className="h-1.5 w-12 rounded-full overflow-hidden bg-milk-400">
+            <div
+              className={`h-1.5 w-12 rounded-full overflow-hidden ${isSelected ? 'bg-white/30 dark:bg-cocoa-950/20' : 'bg-milk-400'}`}
+            >
               <div
                 className={`h-full rounded-full ${MASTERY_COLORS[idx]} transition-all`}
                 style={{ width: `${mastery}%` }}
@@ -138,7 +140,9 @@ export function DeckRow({
             clear
           </span>
         ) : (
-          <span className="font-mono text-sm font-bold text-mint-700">
+          <span
+            className={`font-mono text-sm font-bold ${isSelected ? 'text-white dark:text-cocoa-950' : 'text-mint-700'}`}
+          >
             {dueCount}
           </span>
         )}
@@ -160,7 +164,7 @@ export function DeckRow({
             e.stopPropagation();
             setDialogOpen(true);
           }}
-          className="flex size-7 items-center justify-center rounded-md text-ink-100 opacity-0 transition-all hover:bg-terra/10 hover:text-terra group-hover:opacity-100"
+          className={`flex size-7 items-center justify-center rounded-md opacity-0 transition-all group-hover:opacity-100 ${isSelected ? 'text-white/60 hover:bg-white/15 hover:text-white dark:text-cocoa-950/60 dark:hover:bg-cocoa-950/15 dark:hover:text-cocoa-950' : 'text-ink-100 hover:bg-terra/10 hover:text-terra'}`}
         >
           <Trash2 className="size-3.5" />
         </button>
@@ -230,7 +234,7 @@ export function DeckRow({
             e.stopPropagation();
             onToggleCollapse?.();
           }}
-          className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-ink-300 transition-colors hover:text-ink-700"
+          className={`flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors ${isSelected ? 'text-white/70 hover:text-white dark:text-cocoa-950/70 dark:hover:text-cocoa-950' : 'text-ink-300 hover:text-ink-700'}`}
           animate={{ rotate: isCollapsed ? 180 : 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         >
