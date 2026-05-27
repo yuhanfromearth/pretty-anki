@@ -1,20 +1,24 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
   NotFoundException,
   Param,
+  Post,
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
   ApiOperation,
   ApiOkResponse,
+  ApiCreatedResponse,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { AnkiConnectService } from './anki-connect.service.js';
 import { DeckStatsDto } from '../dtos/deck-stats.dto.js';
+import { CreateDeckDto } from '../dtos/create-deck.dto.js';
 import { StreakDto } from '../dtos/streak.dto.js';
 import { ReviewPaceDto } from '../dtos/review-pace.dto.js';
 
@@ -87,6 +91,13 @@ export class AnkiController {
       'Cache-Control': 'public, max-age=86400',
     });
     res.send(buf);
+  }
+
+  @Post('decks')
+  @ApiOperation({ summary: 'Create a new deck' })
+  @ApiCreatedResponse({ description: 'Deck created, returns deck ID' })
+  createDeck(@Body() body: CreateDeckDto) {
+    return this.anki.createDeck(body.name);
   }
 
   @Delete('decks/:name')

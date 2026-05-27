@@ -60,7 +60,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         style={{ background: 'var(--page-bg)', backgroundAttachment: 'fixed' }}
       >
         <Header />
-        <main className="min-h-0 flex-1 max-w-5xl w-full mx-auto px-5 sm:px-8 pt-8 pb-4">
+        <main className="min-h-0 flex-1 max-w-5xl w-full mx-auto px-5 sm:px-8 pt-5 pb-4">
           {children}
         </main>
         {/*<TanStackDevtools

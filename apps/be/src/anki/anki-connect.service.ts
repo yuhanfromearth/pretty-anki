@@ -154,6 +154,10 @@ export class AnkiConnectService {
     return { medianMs, totalDue };
   }
 
+  async createDeck(deckName: string): Promise<number> {
+    return this.invoke<number>('createDeck', { deck: deckName });
+  }
+
   async deleteDeck(deckName: string, cardsToo: boolean): Promise<void> {
     await this.invoke<void>('deleteDecks', {
       decks: [deckName],

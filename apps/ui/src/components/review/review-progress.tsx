@@ -25,19 +25,16 @@ export function ReviewProgress({
             style={{ width: `${total > 0 ? (reviewed / total) * 100 : 0}%` }}
           />
           {total > 10 &&
-            Array.from(
-              { length: Math.floor((total - 1) / 5) },
-              (_, i) => {
-                const pos = ((i + 1) * 5) / total * 100;
-                return (
-                  <div
-                    key={i}
-                    className="absolute top-0 h-full w-px bg-black/10 dark:bg-white/15"
-                    style={{ left: `${pos}%` }}
-                  />
-                );
-              }
-            )}
+            Array.from({ length: Math.floor((total - 1) / 5) }, (_, i) => {
+              const pos = (((i + 1) * 5) / total) * 100;
+              return (
+                <div
+                  key={i}
+                  className="absolute top-0 h-full w-px bg-black/10 dark:bg-white/15"
+                  style={{ left: `${pos}%` }}
+                />
+              );
+            })}
         </div>
       ) : (
         <div className={`flex gap-1 ${total > 10 ? 'items-end' : ''}`}>

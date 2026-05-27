@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react';
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, Check } from 'lucide-react';
+import { motion } from 'motion/react';
+import {
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+  Check,
+  Plus,
+} from 'lucide-react';
 import type { DeckStats, DeckStatsItem } from '@nts/dtos';
 import { DeckRow } from './deck-row';
+import { CreateDeckDialog } from './create-deck-dialog';
 import {
   Popover,
   PopoverContent,
@@ -59,6 +66,7 @@ export function DeckList({
 }: DeckListProps) {
   const [sortKey, setSortKey] = useState<SortKey>('reviews-desc');
   const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const sortedDecks = useMemo(
     () => sortDecks(deckStats.decks, sortKey),
@@ -112,8 +120,26 @@ export function DeckList({
               onClick={() => onSelectDeck?.(deck.name)}
             />
           ))}
+          <motion.button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="flex cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-milk-400 px-3 py-2 text-sm font-medium text-ink-300 transition-colors hover:border-mint-400 hover:text-mint-600"
+            whileHover={{ scale: 0.985 }}
+            whileTap={{ scale: 0.975 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+          >
+            <Plus className="size-4" />
+            New deck
+          </motion.button>
         </div>
       </div>
+
+      <CreateDeckDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        existingDecks={deckStats.decks.map((d) => d.name)}
+        onCreated={(name) => onSelectDeck?.(name)}
+      />
     </section>
   );
 }
