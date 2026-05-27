@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
@@ -40,17 +40,108 @@ function getMastery(deck: DeckStatsItem) {
   return deck.totalCards > 0 ? deck.matureCards / deck.totalCards : 0;
 }
 
-function sortDecks(decks: DeckStatsItem[], key: SortKey): DeckStatsItem[] {
-  const sorted = [...decks];
+function getCompareFn(
+  key: SortKey
+): (a: DeckStatsItem, b: DeckStatsItem) => number {
   const [field, dir] = key.split('-') as [string, string];
   const mult = dir === 'desc' ? -1 : 1;
 
   if (field === 'alpha') {
-    return sorted.sort((a, b) => mult * a.name.localeCompare(b.name));
+    return (a, b) => mult * a.name.localeCompare(b.name);
   }
 
   const getValue = field === 'reviews' ? getDueCount : getMastery;
-  return sorted.sort((a, b) => mult * (getValue(a) - getValue(b)));
+  return (a, b) => mult * (getValue(a) - getValue(b));
+}
+
+interface DeckNode {
+  segment: string;
+  fullName: string;
+  deck: DeckStatsItem | null;
+  children: DeckNode[];
+}
+
+function buildDeckTree(decks: DeckStatsItem[]): DeckNode[] {
+  const root: DeckNode[] = [];
+  const nodeMap = new Map<string, DeckNode>();
+
+  for (const deck of decks) {
+    const parts = deck.name.split('::');
+    let currentLevel = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const fullName = parts.slice(0, i + 1).join('::');
+      let node = nodeMap.get(fullName);
+
+      if (!node) {
+        node = { segment: parts[i], fullName, deck: null, children: [] };
+        nodeMap.set(fullName, node);
+        currentLevel.push(node);
+      }
+
+      if (i === parts.length - 1) {
+        node.deck = deck;
+      }
+
+      currentLevel = node.children;
+    }
+  }
+
+  return root;
+}
+
+interface FlatDeckEntry {
+  deck: DeckStatsItem;
+  displayName: string;
+  depth: number;
+  hasChildren: boolean;
+  subDeckCount: number;
+}
+
+function countDescendantDecks(node: DeckNode): number {
+  let count = 0;
+  for (const child of node.children) {
+    if (child.deck) count++;
+    count += countDescendantDecks(child);
+  }
+  return count;
+}
+
+function flattenDeckTree(
+  nodes: DeckNode[],
+  compareFn: (a: DeckStatsItem, b: DeckStatsItem) => number,
+  collapsed: ReadonlySet<string>,
+  depth = 0
+): FlatDeckEntry[] {
+  const sorted = [...nodes].sort((a, b) => {
+    if (a.deck && b.deck) return compareFn(a.deck, b.deck);
+    return a.segment.localeCompare(b.segment);
+  });
+
+  const result: FlatDeckEntry[] = [];
+  for (const node of sorted) {
+    const hasChildren = node.children.length > 0;
+    if (node.deck) {
+      result.push({
+        deck: node.deck,
+        displayName: node.segment,
+        depth,
+        hasChildren,
+        subDeckCount: countDescendantDecks(node),
+      });
+    }
+    if (hasChildren && !collapsed.has(node.fullName)) {
+      result.push(
+        ...flattenDeckTree(
+          node.children,
+          compareFn,
+          collapsed,
+          node.deck ? depth + 1 : depth
+        )
+      );
+    }
+  }
+  return result;
 }
 
 interface DeckListProps {
@@ -67,11 +158,21 @@ export function DeckList({
   const [sortKey, setSortKey] = useState<SortKey>('reviews-desc');
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-  const sortedDecks = useMemo(
-    () => sortDecks(deckStats.decks, sortKey),
-    [deckStats.decks, sortKey]
-  );
+  const flatEntries = useMemo(() => {
+    const tree = buildDeckTree(deckStats.decks);
+    return flattenDeckTree(tree, getCompareFn(sortKey), collapsed);
+  }, [deckStats.decks, sortKey, collapsed]);
+
+  const toggleCollapse = (name: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   const activeLabel = SORT_OPTIONS.find((o) => o.key === sortKey)!.label;
   const SortIcon = sortKey.endsWith('-desc')
@@ -112,15 +213,35 @@ export function DeckList({
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="grid gap-2">
-          {sortedDecks.map((deck) => (
-            <DeckRow
-              key={deck.name}
-              deck={deck}
-              isSelected={deck.name === selectedDeck}
-              onClick={() => onSelectDeck?.(deck.name)}
-            />
-          ))}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {flatEntries.map((entry) => (
+              <motion.div
+                key={entry.deck.name}
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{
+                  layout: { type: 'spring', stiffness: 400, damping: 30 },
+                  opacity: { duration: 0.15 },
+                }}
+              >
+                <DeckRow
+                  deck={entry.deck}
+                  displayName={entry.displayName}
+                  depth={entry.depth}
+                  hasChildren={entry.hasChildren}
+                  subDeckCount={entry.subDeckCount}
+                  isCollapsed={collapsed.has(entry.deck.name)}
+                  onToggleCollapse={() => toggleCollapse(entry.deck.name)}
+                  isSelected={entry.deck.name === selectedDeck}
+                  onClick={() => onSelectDeck?.(entry.deck.name)}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
           <motion.button
+            layout
             type="button"
             onClick={() => setCreateOpen(true)}
             className="flex cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-milk-400 px-3 py-2 text-sm font-medium text-ink-300 transition-colors hover:border-mint-400 hover:text-mint-600"

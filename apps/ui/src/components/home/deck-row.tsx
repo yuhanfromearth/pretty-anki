@@ -15,6 +15,12 @@ import { Button } from '#/components/ui/button';
 
 interface DeckRowProps {
   deck: DeckStatsItem;
+  displayName?: string;
+  depth?: number;
+  hasChildren?: boolean;
+  subDeckCount?: number;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
   isSelected?: boolean;
   onClick?: () => void;
 }
@@ -35,7 +41,17 @@ function hashIndex(name: string): number {
   return Math.abs(hash) % MASTERY_COLORS.length;
 }
 
-export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
+export function DeckRow({
+  deck,
+  displayName,
+  depth = 0,
+  hasChildren,
+  subDeckCount = 0,
+  isCollapsed,
+  onToggleCollapse,
+  isSelected,
+  onClick,
+}: DeckRowProps) {
   const dueCount = deck.newCount + deck.learnCount + deck.reviewCount;
   const mastery =
     deck.totalCards > 0
@@ -67,6 +83,7 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
   return (
     <motion.div
       onClick={onClick}
+      style={depth ? { marginLeft: `${depth * 1.25}rem` } : undefined}
       className={`group flex items-center gap-3 rounded-md px-3 py-2 cursor-pointer transition-colors ${
         isSelected ? 'bg-mint-500' : 'bg-milk-300 hover:bg-milk-400/60'
       }`}
@@ -76,7 +93,7 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
     >
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-ink-900 truncate">
-          {deck.name}
+          {displayName ?? deck.name}
         </div>
       </div>
 
@@ -156,9 +173,19 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
             Delete &ldquo;{deck.name}&rdquo;?
           </DialogTitle>
           <DialogDescription className="mt-1.5 text-sm text-ink-500">
-            This will permanently delete the deck and all{' '}
-            <strong className="text-ink-700">{deck.totalCards}</strong> cards in
-            it. This cannot be undone.
+            This will permanently delete the deck
+            {subDeckCount > 0 && (
+              <>
+                {' '}
+                and its{' '}
+                <strong className="text-ink-700">
+                  {subDeckCount} sub-deck{subDeckCount > 1 ? 's' : ''}
+                </strong>
+              </>
+            )}
+            , including all{' '}
+            <strong className="text-ink-700">{deck.totalCards}</strong> cards.
+            This cannot be undone.
           </DialogDescription>
 
           {deleteMutation.isError && (
@@ -196,7 +223,22 @@ export function DeckRow({ deck, isSelected, onClick }: DeckRowProps) {
         </DialogContent>
       </Dialog>
 
-      <ChevronUp className="size-4 text-ink-100 transition-colors group-hover:text-ink-300" />
+      {hasChildren ? (
+        <motion.button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleCollapse?.();
+          }}
+          className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-ink-300 transition-colors hover:text-ink-700"
+          animate={{ rotate: isCollapsed ? 180 : 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        >
+          <ChevronUp className="size-5" />
+        </motion.button>
+      ) : (
+        <div className="w-7 shrink-0" />
+      )}
     </motion.div>
   );
 }
