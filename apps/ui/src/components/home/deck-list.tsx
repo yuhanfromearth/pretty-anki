@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowDownWideNarrow,
@@ -31,6 +31,13 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'alpha-asc', label: 'Name: A → Z' },
   { key: 'alpha-desc', label: 'Name: Z → A' },
 ];
+
+const SORT_STORAGE_KEY = 'deck-list:sort';
+const DEFAULT_SORT: SortKey = 'reviews-desc';
+
+function isSortKey(value: string): value is SortKey {
+  return SORT_OPTIONS.some((o) => o.key === value);
+}
 
 function getDueCount(deck: DeckStatsItem) {
   return deck.newCount + deck.learnCount + deck.reviewCount;
@@ -155,7 +162,16 @@ export function DeckList({
   selectedDeck,
   onSelectDeck,
 }: DeckListProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('reviews-desc');
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    if (typeof window === 'undefined') return DEFAULT_SORT;
+    const stored = localStorage.getItem(SORT_STORAGE_KEY);
+    return stored && isSortKey(stored) ? stored : DEFAULT_SORT;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(SORT_STORAGE_KEY, sortKey);
+  }, [sortKey]);
+
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
