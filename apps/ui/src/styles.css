@@ -122,6 +122,19 @@ body {
   --mint-500: #7fb39a;
   --mint-700: #4f8a72;
 
+  /* Streak heat-map ramp: 0 = empty day, 1..10 = increasing reviews. */
+  --heat-0: #ece2d0;
+  --heat-1: #d6ecdf;
+  --heat-2: #bfe1cd;
+  --heat-3: #a3d4b6;
+  --heat-4: #86c8a0;
+  --heat-5: #6abb8b;
+  --heat-6: #51ab77;
+  --heat-7: #3f9667;
+  --heat-8: #2f8056;
+  --heat-9: #246646;
+  --heat-10: #184d35;
+
   --background: #f0e6d3;
   --foreground: #2c2523;
   --card: #f8f2e7;
@@ -220,6 +233,19 @@ body {
   --mint-500: #5a9978;
   --mint-700: #6baa88;
 
+  /* Dark ramp brightens with volume (more reviews = brighter on dark bg). */
+  --heat-0: #241e18;
+  --heat-1: #1f3b2c;
+  --heat-2: #245234;
+  --heat-3: #2a6b40;
+  --heat-4: #2f834b;
+  --heat-5: #369a57;
+  --heat-6: #41ad64;
+  --heat-7: #54bd76;
+  --heat-8: #6fcd8c;
+  --heat-9: #8fdca6;
+  --heat-10: #b3ebc2;
+
   --shadow-soft: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
   --shadow-medium: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
   --shadow-heavy: 0 18px 52px 0 rgba(0, 0, 0, 0.45);
@@ -248,6 +274,17 @@ body {
   }
   html {
     @apply font-sans;
+  }
+}
+
+@keyframes heat-cell-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

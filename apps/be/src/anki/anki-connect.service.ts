@@ -118,7 +118,30 @@ export class AnkiConnectService {
       days++;
     }
 
-    return { days };
+    // Dense daily history for the heat map: last HEATMAP_WEEKS Monday-aligned
+    // weeks through today, filling days with no reviews as 0. Uses UTC dates to
+    // stay consistent with the streak loop above (known UTC/local-day caveat).
+    const HEATMAP_WEEKS = 26; // ~6 months
+    const today = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+    );
+    const mondayOffset = (today.getUTCDay() + 6) % 7; // 0 = Monday
+    const start = new Date(today);
+    start.setUTCDate(
+      start.getUTCDate() - mondayOffset - (HEATMAP_WEEKS - 1) * 7,
+    );
+
+    const history: { date: string; count: number }[] = [];
+    for (
+      const d = new Date(start);
+      d <= today;
+      d.setUTCDate(d.getUTCDate() + 1)
+    ) {
+      const dateStr = d.toISOString().slice(0, 10);
+      history.push({ date: dateStr, count: countByDate.get(dateStr) ?? 0 });
+    }
+
+    return { days, history };
   }
 
   async getReviewPace(): Promise<ReviewPace> {

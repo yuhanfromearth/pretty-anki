@@ -5,6 +5,12 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Streak } from '@nts/dtos';
 import { SettingsDialog } from '#/components/settings-dialog';
+import { StreakHeatmap } from '#/components/streak-heatmap';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '#/components/ui/popover';
 
 function Breadcrumb() {
   const matches = useMatches();
@@ -160,12 +166,28 @@ export function Header() {
 
         <div className="ml-auto flex items-center gap-1">
           {streak.data && (
-            <div className="mr-2 flex items-center gap-1.5 rounded-full bg-milk-200/60 border border-milk-300/50 pl-0.5 pr-2.5 py-0.5 text-xs font-medium">
-              <span className="flex size-5.5 items-center justify-center rounded-full bg-milk-400/60 font-display text-[11px] font-semibold text-ink-700">
-                {streak.data.days}
-              </span>
-              <span className="text-ink-700">day streak</span>
-            </div>
+            <Popover>
+              <PopoverTrigger
+                openOnHover
+                delay={150}
+                closeDelay={200}
+                className="mr-2 flex items-center gap-1.5 rounded-full bg-milk-200/60 border border-milk-300/50 pl-0.5 pr-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-milk-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-300"
+              >
+                <span className="flex size-5.5 items-center justify-center rounded-full bg-milk-400/60 font-display text-[11px] font-semibold text-ink-700">
+                  {streak.data.days}
+                </span>
+                <span className="text-ink-700">day streak</span>
+              </PopoverTrigger>
+              <PopoverContent
+                backdrop
+                side="bottom"
+                align="end"
+                sideOffset={8}
+                className="w-auto rounded-2xl border border-milk-300/40 bg-milk-50 p-4 shadow-soft ring-0"
+              >
+                <StreakHeatmap streak={streak.data} />
+              </PopoverContent>
+            </Popover>
           )}
           <button
             onClick={toggleTheme}
