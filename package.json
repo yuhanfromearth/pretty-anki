@@ -1,5 +1,5 @@
 {
-  "name": "nest-tanstack-template",
+  "name": "pretty-anki",
   "version": "0.0.0-development",
   "description": "Web UI for Anki running locally.",
   "type": "module",

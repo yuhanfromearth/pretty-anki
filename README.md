@@ -1,95 +1,33 @@
-# nest-tanstack-template
+# anki-ui
 
-Starter monorepo: **NestJS 11 (ESM)** backend + **TanStack Start (Vite 7 + React 19)** frontend, with a shared **Zod DTOs** package validated end-to-end. Flat ESLint config, Prettier, Vitest in both apps.
+You like Anki but can't stand how it looks?
 
-## Stack
+> ⚠️ **Reality check:** no amount of prettiness will help you learn a language. In the end it comes down to putting in the hours, week after week after week. This just makes those hours a little nicer to look at.
 
-- `apps/be` — NestJS 11, ESM, ZodValidationPipe, ServeStaticModule serving the built UI
-- `apps/ui` — TanStack Start + Vite 7 + React 19 + Tailwind v4 + base-ui/shadcn primitives + TanStack Query
-- `dtos` — `@nts/dtos`, shared Zod schemas + inferred types
+A prettier front-end for [Anki](https://apps.ankiweb.net/). It talks to your local Anki collection through the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on and wraps it in a calm, typed web UI — deck stats, reviewing, a streak heat-map, and full deck management (search, add, edit, and delete cards with a rich-text editor).
+
+## Prerequisites
+
+- Node 20+
+- **Anki Desktop App running** with the **AnkiConnect** add-on installed (listening on `localhost:8765`). The backend reaches it via the env var `ANKI_CONNECT_URL` (defaults to `http://localhost:8765`).
 
 ## Getting started
 
-Requires Node 20+.
-
 ```sh
 npm install
-npm run start
+npm start
 ```
 
-Runs three watchers concurrently:
+`npm start` builds the shared DTOs, then runs three watchers concurrently:
 
 - `dtos` — `tsc --watch`
-- `apps/be` — `nest start --watch` on `:8080`
-- `apps/ui` — `vite dev` on `:3000`
+- `apps/be` — NestJS on `:8080` (routes under `/api`, Swagger at `/api/docs`)
+- `apps/ui` — Vite dev server on `:3000`
 
-Open <http://localhost:3000>. The UI hits `/api/hello` through Vite's dev proxy, which forwards to the NestJS backend.
+Open <http://localhost:3000>. The UI proxies `/api/*` to the backend, which forwards to AnkiConnect. If the header status dot is muted, Anki/AnkiConnect isn't reachable.
 
-## Production
+## Stack
 
-```sh
-npm run start:prod
-```
-
-Builds dtos + backend + frontend, then `bin/nts.mjs` boots the backend on `:8080`. NestJS serves the built UI via `ServeStaticModule` from `apps/ui/dist/client`.
-
-## Layout
-
-```
-.
-├── apps/
-│   ├── be/                  NestJS backend
-│   │   └── src/
-│   │       ├── app.controller.ts    GET /hello → HelloDto
-│   │       ├── app.module.ts        ConfigModule + ServeStatic + ZodValidationPipe
-│   │       ├── dtos/hello.dto.ts    createZodDto wrapper
-│   │       └── main.ts              global '/api' prefix, listens on PORT
-│   └── ui/                  Vite + TanStack Start frontend
-│       └── src/
-│           ├── routes/__root.tsx    shell + theme bootstrap
-│           ├── routes/index.tsx     Hello card (useQuery against /api/hello)
-│           ├── components/ui/       shadcn primitives
-│           ├── integrations/tanstack-query/   QueryClient context
-│           └── styles.css           Tailwind v4 + theme tokens
-├── dtos/src/hello.ts        z.object({ message: z.string() })
-├── bin/nts.mjs              prod launcher
-└── scripts/{prepack,postpack}.mjs   vendor @nts/dtos for bundleDependencies
-```
-
-## Renaming for your project
-
-Rename in this order so npm/TS resolution stays sane:
-
-1. `package.json` (root) — `name`, `bin`, `bundleDependencies`, dependency `@nts/dtos`
-2. `dtos/package.json` — `name` (`@nts/dtos` → `@yours/dtos`)
-3. `apps/be/package.json` and `apps/ui/package.json` — `name`, dependency `@nts/dtos`
-4. `bin/nts.mjs`, `scripts/prepack.mjs`, `scripts/postpack.mjs` — replace `@nts` and `nts`
-5. Re-run `npm install` to relink the workspace
-
-## Adding a new feature slice
-
-1. Add a Zod schema in `dtos/src/<feature>.ts` and re-export from `dtos/src/index.ts`.
-2. `npm run build:dtos` (the dev watcher does this automatically).
-3. Backend: add `apps/be/src/dtos/<feature>.dto.ts` wrapping the schema with `createZodDto`, then a controller method on `AppController` (or split into a feature module under `apps/be/src/<feature>/`).
-4. Frontend: import the type from `@nts/dtos` and call `/api/<feature>` via `useQuery` / `useMutation`.
-
-## Scripts
-
-```sh
-npm run build:dtos          # tsc on dtos/
-npm run build               # dtos + be + ui
-npm start                   # dev: dtos watch + be watch + ui dev (concurrently)
-npm run start:prod          # build + run prod via bin/nts.mjs
-npm run lint                # eslint flat config across the repo
-npm run lint:fix
-npm run format              # prettier --write
-npm run format:check
-npm test --workspaces --if-present
-```
-
-## Notes
-
-- ESM gotcha: backend imports must include `.js` (e.g. `import { AppService } from './app.service.js'`) because of `module: nodenext`.
-- The Vite dev server proxies `/api/*` → `http://localhost:8080` (preserving the `/api` prefix). The Nest app uses `app.setGlobalPrefix('api')`, so controller routes are written without `/api`.
-- `routeTree.gen.ts` is generated by `@tanstack/router-plugin` on first dev run.
-- `bundleDependencies` ships `@nts/dtos` inside the published tarball; `prepack` materializes the workspace symlink as a real copy before pack and `postpack` restores it.
+- `apps/be` — NestJS 11 (ESM) backend that proxies the AnkiConnect HTTP API and validates I/O with Zod
+- `apps/ui` — TanStack Start + Vite 7 + React 19 + Tailwind v4, with TipTap for card editing
+- `dtos` — `@nts/dtos`, shared Zod schemas + inferred types used by both apps
