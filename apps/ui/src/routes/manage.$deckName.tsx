@@ -73,11 +73,15 @@ function ManagePage() {
     setPending(null);
   };
 
-  // Auto-select the first note once results arrive and nothing is selected.
+  // Auto-select the first note on initial load only. We deliberately don't
+  // re-select afterwards so that deleting a card clears the editor (shows the
+  // empty state) instead of jumping to another card's fields.
   // The selected note is held by value so that filtering the list (e.g. while
   // typing in search) never unmounts the editor and discards unsaved edits.
+  const didAutoSelect = useRef(false);
   useEffect(() => {
-    if (selection === null && notes.length > 0) {
+    if (!didAutoSelect.current && selection === null && notes.length > 0) {
+      didAutoSelect.current = true;
       setSelection({ mode: 'edit', note: notes[0] });
     }
   }, [selection, notes]);
