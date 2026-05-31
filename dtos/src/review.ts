@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const ReviewCardSchema = z.object({
   cardId: z.number(),
+  noteId: z.number(),
   question: z.string(),
   answer: z.string(),
   deckName: z.string(),

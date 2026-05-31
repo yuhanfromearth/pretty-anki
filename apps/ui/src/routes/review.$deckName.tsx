@@ -254,6 +254,8 @@ function ReviewPage() {
       <div className="mx-auto w-full max-w-2xl pt-4">
         <ReviewCard
           cardId={card.cardId}
+          noteId={card.noteId}
+          deckName={decoded}
           question={card.question}
           answer={card.answer}
           audio={card.audio}

@@ -242,6 +242,11 @@ export class AnkiConnectService {
       } | null>('guiCurrentCard');
       if (!card) return null;
 
+      // guiCurrentCard doesn't include the note id, so resolve it from the card.
+      const [noteId] = await this.invoke<number[]>('cardsToNotes', {
+        cards: [card.cardId],
+      });
+
       const fieldEntries = Object.entries(card.fields).sort(
         ([, a], [, b]) => a.order - b.order,
       );
@@ -251,6 +256,7 @@ export class AnkiConnectService {
 
       return {
         cardId: card.cardId,
+        noteId,
         question,
         answer,
         deckName: card.deckName,

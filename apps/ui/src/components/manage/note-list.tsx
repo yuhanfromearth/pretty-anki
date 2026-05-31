@@ -1,11 +1,15 @@
 import { Search, Plus, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useEffect, useRef } from 'react';
 import type { Note } from '@nts/dtos';
 import { fieldToPlainText, hasCJK } from './manage-media';
 
 interface NoteListProps {
   notes: Note[];
   selectedNoteId: number | null;
+  /** Note id to auto-scroll into view (e.g. deep-linked from the review
+   *  screen). Only this row scrolls — manual selections never auto-scroll. */
+  scrollToNoteId: number | null;
   addActive: boolean;
   search: string;
   onSearchChange: (value: string) => void;
@@ -18,6 +22,7 @@ interface NoteListProps {
 export function NoteList({
   notes,
   selectedNoteId,
+  scrollToNoteId,
   addActive,
   search,
   onSearchChange,
@@ -72,6 +77,7 @@ export function NoteList({
                 key={note.noteId}
                 note={note}
                 selected={note.noteId === selectedNoteId}
+                autoScroll={note.noteId === scrollToNoteId}
                 onSelect={() => onSelect(note)}
               />
             ))}
@@ -91,19 +97,29 @@ export function NoteList({
 function NoteRow({
   note,
   selected,
+  autoScroll,
   onSelect,
 }: {
   note: Note;
   selected: boolean;
+  autoScroll: boolean;
   onSelect: () => void;
 }) {
   const values = Object.values(note.fields);
   const primary = fieldToPlainText(values[0] ?? '') || '(empty)';
   const secondary = fieldToPlainText(values[1] ?? '');
 
+  // Scroll into view only for a deep-linked row (arriving from the review
+  // screen or a pasted URL). Manual selections never trigger this.
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (autoScroll) ref.current?.scrollIntoView({ block: 'start' });
+  }, [autoScroll]);
+
   return (
     <li>
       <motion.button
+        ref={ref}
         type="button"
         onClick={onSelect}
         whileTap={{ scale: 0.99 }}

@@ -1,5 +1,6 @@
 import { motion, useMotionValue, useSpring } from 'motion/react';
-import { Volume2 } from 'lucide-react';
+import { Volume2, Pencil } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { useRef, useCallback, useEffect } from 'react';
 
 export interface CardDismiss {
@@ -9,6 +10,8 @@ export interface CardDismiss {
 
 interface ReviewCardProps {
   cardId: number;
+  noteId: number;
+  deckName: string;
   question: string;
   answer: string;
   audio: string[];
@@ -68,6 +71,8 @@ function useTilt(enabled: boolean) {
 
 export function ReviewCard({
   cardId,
+  noteId,
+  deckName,
   question,
   answer,
   audio,
@@ -143,6 +148,18 @@ export function ReviewCard({
           }}
           transition={{ duration: 0.08 }}
         />
+        {/* Edit link — stays top-right through flip/tilt */}
+        <Link
+          to="/manage/$deckName"
+          params={{ deckName }}
+          search={{ noteId }}
+          title="Edit card"
+          aria-label="Edit card"
+          onClick={(e) => e.stopPropagation()}
+          className="absolute right-3 top-3 z-20 flex size-8 items-center justify-center rounded-full border border-milk-300/80 bg-milk-100/80 text-ink-400 transition-colors hover:bg-milk-200 hover:text-ink-600 active:scale-95"
+        >
+          <Pencil className="size-3.5" />
+        </Link>
         <motion.div
           className="relative grid min-h-96 w-full"
           style={{ transformStyle: 'preserve-3d' }}

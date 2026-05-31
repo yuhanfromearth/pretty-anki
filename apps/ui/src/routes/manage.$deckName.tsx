@@ -15,6 +15,10 @@ import { NoteEditPanel, AddNotePanel } from '#/components/manage/note-detail';
 import { fetchNotes, fetchModels, notesKey } from '#/components/manage/api';
 
 export const Route = createFileRoute('/manage/$deckName')({
+  validateSearch: (search: Record<string, unknown>): { noteId?: number } => {
+    const n = Number(search.noteId);
+    return Number.isFinite(n) && n > 0 ? { noteId: n } : {};
+  },
   component: ManagePage,
 });
 
@@ -24,6 +28,7 @@ const LAST_MODEL_KEY = 'manage:last-model';
 
 function ManagePage() {
   const { deckName } = Route.useParams();
+  const { noteId: targetNoteId } = Route.useSearch();
   const decoded = decodeURIComponent(deckName);
 
   const [search, setSearch] = useState('');
@@ -73,18 +78,24 @@ function ManagePage() {
     setPending(null);
   };
 
-  // Auto-select the first note on initial load only. We deliberately don't
+  // Initial selection on first load only. When a `noteId` search param is
+  // present (e.g. arriving from the review screen's edit button) we select that
+  // note; otherwise we fall back to the first note. We deliberately don't
   // re-select afterwards so that deleting a card clears the editor (shows the
   // empty state) instead of jumping to another card's fields.
   // The selected note is held by value so that filtering the list (e.g. while
   // typing in search) never unmounts the editor and discards unsaved edits.
   const didAutoSelect = useRef(false);
   useEffect(() => {
-    if (!didAutoSelect.current && selection === null && notes.length > 0) {
-      didAutoSelect.current = true;
-      setSelection({ mode: 'edit', note: notes[0] });
-    }
-  }, [selection, notes]);
+    if (didAutoSelect.current || selection !== null || notes.length === 0)
+      return;
+    didAutoSelect.current = true;
+    const target =
+      targetNoteId != null
+        ? notes.find((n) => n.noteId === targetNoteId)
+        : undefined;
+    setSelection({ mode: 'edit', note: target ?? notes[0] });
+  }, [selection, notes, targetNoteId]);
 
   const handleModelChange = (name: string) => {
     setModelName(name);
@@ -128,6 +139,7 @@ function ManagePage() {
               selectedNoteId={
                 selection?.mode === 'edit' ? selection.note.noteId : null
               }
+              scrollToNoteId={targetNoteId ?? null}
               addActive={selection?.mode === 'add'}
               search={search}
               onSearchChange={setSearch}
