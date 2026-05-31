@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Sun, Moon, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import type { Streak } from '@nts/dtos';
+import type { Streak } from '@nts/shared';
 import { SettingsDialog } from '#/components/settings-dialog';
 import { StreakHeatmap } from '#/components/streak-heatmap';
 import {

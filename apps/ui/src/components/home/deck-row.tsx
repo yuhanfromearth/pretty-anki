@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { motion } from 'motion/react';
 import { ChevronUp, Check, Trash2, SlidersHorizontal } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { DeckStatsItem } from '@nts/dtos';
+import type { DeckStatsItem } from '@nts/shared';
 import {
   Dialog,
   DialogContent,

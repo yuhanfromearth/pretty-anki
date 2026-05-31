@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Camera, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import type { UserSettings } from '@nts/dtos';
+import type { UserSettings } from '@nts/shared';
 import {
   Dialog,
   DialogContent,

@@ -6,7 +6,7 @@ import {
   Check,
   Plus,
 } from 'lucide-react';
-import type { DeckStats, DeckStatsItem } from '@nts/dtos';
+import type { DeckStats, DeckStatsItem } from '@nts/shared';
 import { DeckRow } from './deck-row';
 import { CreateDeckDialog } from './create-deck-dialog';
 import {

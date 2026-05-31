@@ -1,5 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { extractAudio, stripHtml } from '@nts/shared';
 import type {
   DeckStats,
   DeckStatsItem,
@@ -11,7 +12,7 @@ import type {
   NoteList,
   NoteFields,
   NoteModelList,
-} from '@nts/dtos';
+} from '@nts/shared';
 
 interface AnkiDeckStats {
   deck_id: number;
@@ -250,17 +251,17 @@ export class AnkiConnectService {
       });
 
       const fieldEntries = Object.entries(card.fields);
-      const audio = fieldEntries.flatMap(([, f]) => this.extractAudio(f.value));
+      const audio = fieldEntries.flatMap(([, f]) => extractAudio(f.value));
 
       // Use the template-rendered question/answer rather than reconstructing
       // from note fields by position: a single note can produce multiple cards
       // (e.g. an inverted card swaps front/back), and only the rendered output
       // reflects each card's own template. The answer HTML repeats the front
       // followed by `<hr id=answer>`, so keep only the back half.
-      const question = this.stripHtml(card.question);
+      const question = stripHtml(card.question);
       const answerBack =
         card.answer.split(/<hr id=?["']?answer["']?\s*\/?>/i)[1] ?? card.answer;
-      const answer = this.stripHtml(answerBack);
+      const answer = stripHtml(answerBack);
 
       return {
         cardId: card.cardId,
@@ -391,33 +392,6 @@ export class AnkiConnectService {
 
   private escapeQuery(value: string): string {
     return value.replace(/["\\]/g, '\\$&');
-  }
-
-  private extractAudio(html: string): string[] {
-    const matches = [...html.matchAll(/\[sound:([^\]]+)]/g)];
-    return matches.map((m) => m[1]);
-  }
-
-  private stripHtml(html: string): string {
-    return (
-      html
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/\[sound:[^\]]+]/g, '')
-        // Rendered cards emit `[anki:play:q:0]` / `[anki:play:a:0]` placeholders
-        // where audio sits; we handle playback separately, so drop them.
-        .replace(/\[anki:play:[^\]]+]/g, '')
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/div>\s*<div[^>]*>/gi, '\n')
-        .replace(/<[^>]*>/g, '')
-        .replace(/\u00a0/g, ' ')
-        // Collapse the blank lines left behind by stripped markup so the card
-        // doesn't grow with empty <br>s.
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-        .join('<br>')
-    );
   }
 
   private async countMatureCards(deckName: string): Promise<number> {

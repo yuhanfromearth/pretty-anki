@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw, Layers } from 'lucide-react';
-import type { Note } from '@nts/dtos';
+import type { Note } from '@nts/shared';
 import {
   Dialog,
   DialogContent,

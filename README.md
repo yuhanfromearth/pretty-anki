@@ -20,7 +20,7 @@ npm start
 
 `npm start` builds the shared DTOs, then runs three watchers concurrently:
 
-- `dtos` — `tsc --watch`
+- `shared` — `tsc --watch`
 - `apps/be` — NestJS on `:8080` (routes under `/api`, Swagger at `/api/docs`)
 - `apps/ui` — Vite dev server on `:3000`
 
@@ -30,4 +30,4 @@ Open <http://localhost:3000>. The UI proxies `/api/*` to the backend, which forw
 
 - `apps/be` — NestJS 11 (ESM) backend that proxies the AnkiConnect HTTP API and validates I/O with Zod
 - `apps/ui` — TanStack Start + Vite 7 + React 19 + Tailwind v4, with TipTap for card editing
-- `dtos` — `@nts/dtos`, shared Zod schemas + inferred types used by both apps
+- `shared` — `@nts/shared`, shared Zod schemas, inferred types, and pure utilities used by both apps

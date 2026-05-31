@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { DeckStats, ReviewPace, UserSettings } from '@nts/dtos';
+import type { DeckStats, ReviewPace, UserSettings } from '@nts/shared';
 
 interface GreetingProps {
   deckStats: DeckStats | undefined;

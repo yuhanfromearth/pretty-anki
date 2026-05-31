@@ -3,7 +3,7 @@ import {
   AnswerCardSchema,
   RescheduleCardSchema,
   ReviewSessionSchema,
-} from '@nts/dtos';
+} from '@nts/shared';
 import { createZodDto } from 'nestjs-zod';
 
 export class ReviewCardDto extends createZodDto(ReviewCardSchema) {}

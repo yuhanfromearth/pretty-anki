@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import type { Hello } from '@nts/dtos';
+import type { Hello } from '@nts/shared';
 import { AppService } from './app.service.js';
 
 @ApiTags('App')

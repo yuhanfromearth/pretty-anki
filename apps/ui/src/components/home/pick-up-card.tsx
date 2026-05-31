@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, SlidersHorizontal } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import type { DeckStatsItem } from '@nts/dtos';
+import type { DeckStatsItem } from '@nts/shared';
 
 interface PickUpCardProps {
   deck: DeckStatsItem;

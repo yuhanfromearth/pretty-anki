@@ -6,9 +6,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const target = join(root, 'node_modules', '@nts', 'dtos');
+const target = join(root, 'node_modules', '@nts', 'shared');
 
 rmSync(target, { recursive: true, force: true });
-symlinkSync('../../dtos', target, 'dir');
+symlinkSync('../../shared', target, 'dir');
 
-console.log(`postpack: restored @nts/dtos workspace symlink`);
+console.log(`postpack: restored @nts/shared workspace symlink`);

@@ -18,6 +18,7 @@ interface ReviewCardProps {
   flipped: boolean;
   dismiss: CardDismiss | null;
   tilt?: boolean;
+  showEdit?: boolean;
   onFlip: () => void;
 }
 
@@ -90,6 +91,7 @@ export function ReviewCard({
   flipped,
   dismiss,
   tilt = true,
+  showEdit = true,
   onFlip,
 }: ReviewCardProps) {
   const qSize = questionSize(question);
@@ -160,17 +162,19 @@ export function ReviewCard({
           transition={{ duration: 0.08 }}
         />
         {/* Edit link — stays top-right through flip/tilt */}
-        <Link
-          to="/manage/$deckName"
-          params={{ deckName }}
-          search={{ noteId }}
-          title="Edit card"
-          aria-label="Edit card"
-          onClick={(e) => e.stopPropagation()}
-          className="absolute right-3 top-3 z-20 flex size-8 items-center justify-center rounded-full border border-milk-300/80 bg-milk-100/80 text-ink-400 transition-colors hover:bg-milk-200 hover:text-ink-600 active:scale-95"
-        >
-          <Pencil className="size-3.5" />
-        </Link>
+        {showEdit && (
+          <Link
+            to="/manage/$deckName"
+            params={{ deckName }}
+            search={{ noteId }}
+            title="Edit card"
+            aria-label="Edit card"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute right-3 top-3 z-20 flex size-8 items-center justify-center rounded-full border border-milk-300/80 bg-milk-100/80 text-ink-400 transition-colors hover:bg-milk-200 hover:text-ink-600 active:scale-95"
+          >
+            <Pencil className="size-3.5" />
+          </Link>
+        )}
         <motion.div
           className="relative grid min-h-96 w-full"
           style={{ transformStyle: 'preserve-3d' }}

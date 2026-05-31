@@ -19,12 +19,12 @@
   },
   "workspaces": [
     "apps/*",
-    "dtos"
+    "shared"
   ],
   "scripts": {
-    "build:dtos": "npm run build --workspace=dtos",
-    "build": "npm run build:dtos && npm run build --workspace=apps/be && npm run build --workspace=apps/ui",
-    "start": "npm run build:dtos && concurrently -n dtos,be,ui -c yellow,blue,magenta \"npm run dev --workspace=dtos\" \"npm run start:dev --workspace=apps/be\" \"npm run dev --workspace=apps/ui\"",
+    "build:shared": "npm run build --workspace=shared",
+    "build": "npm run build:shared && npm run build --workspace=apps/be && npm run build --workspace=apps/ui",
+    "start": "npm run build:shared && concurrently -n shared,be,ui -c yellow,blue,magenta \"npm run dev --workspace=shared\" \"npm run start:dev --workspace=apps/be\" \"npm run dev --workspace=apps/ui\"",
     "start:prod": "npm run build && node bin/nts.mjs",
     "prepack": "npm run build && node scripts/prepack.mjs",
     "postpack": "node scripts/postpack.mjs",
@@ -34,7 +34,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "@nts/dtos": "0.1.0",
+    "@nts/shared": "0.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
@@ -46,7 +46,7 @@
     "zod": "^4.0.0"
   },
   "bundleDependencies": [
-    "@nts/dtos"
+    "@nts/shared"
   ],
   "devDependencies": {
     "concurrently": "^9.2.1"

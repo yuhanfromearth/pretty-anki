@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Materialize node_modules/@nts/dtos as a real directory (not a workspace
+// Materialize node_modules/@nts/shared as a real directory (not a workspace
 // symlink) so `bundleDependencies` actually ships its files in the tarball.
 // Run via the `prepack` lifecycle hook; `postpack` restores the symlink.
 
@@ -8,8 +8,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const target = join(root, 'node_modules', '@nts', 'dtos');
-const source = join(root, 'dtos');
+const target = join(root, 'node_modules', '@nts', 'shared');
+const source = join(root, 'shared');
 
 try {
   const stat = lstatSync(target);
@@ -27,4 +27,4 @@ cpSync(source, target, { recursive: true, dereference: true });
 rmSync(join(target, 'node_modules'), { recursive: true, force: true });
 rmSync(join(target, 'src'), { recursive: true, force: true });
 
-console.log(`prepack: vendored @nts/dtos at ${target}`);
+console.log(`prepack: vendored @nts/shared at ${target}`);

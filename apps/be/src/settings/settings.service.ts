@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import type { UserSettings } from '@nts/dtos';
+import type { UserSettings } from '@nts/shared';
 
 const SETTINGS_DIR = join(homedir(), '.pretty-anki');
 const SETTINGS_FILE = join(SETTINGS_DIR, 'settings.json');

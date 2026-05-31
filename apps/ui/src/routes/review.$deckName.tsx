@@ -6,7 +6,7 @@ import type {
   ReviewCard as ReviewCardType,
   ReviewPace,
   UserSettings,
-} from '@nts/dtos';
+} from '@nts/shared';
 import { ReviewCard, type CardDismiss } from '#/components/review/review-card';
 import { AnswerBar } from '#/components/review/answer-bar';
 import { ReviewProgress } from '#/components/review/review-progress';

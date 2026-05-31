@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useReducedMotion } from 'motion/react';
-import type { Streak, StreakDay } from '@nts/dtos';
+import type { Streak, StreakDay } from '@nts/shared';
 
 const MONTHS = [
   'Jan',

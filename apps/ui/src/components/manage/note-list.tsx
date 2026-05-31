@@ -1,7 +1,7 @@
 import { Search, Plus, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useRef } from 'react';
-import type { Note } from '@nts/dtos';
+import type { Note } from '@nts/shared';
 import { fieldToPlainText, hasCJK } from './manage-media';
 
 interface NoteListProps {

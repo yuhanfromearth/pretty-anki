@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronsUpDown, Trash2, Save, Plus } from 'lucide-react';
-import type { Note, NoteModel, NoteFields } from '@nts/dtos';
+import type { Note, NoteModel, NoteFields } from '@nts/shared';
 import {
   Popover,
   PopoverContent,
@@ -9,8 +9,39 @@ import {
 } from '#/components/ui/popover';
 import { Button } from '#/components/ui/button';
 import { RichFieldEditor } from './rich-field-editor';
+import { CardPreview } from './card-preview';
 import { addNote, updateNote, deleteNote, notesKey } from './api';
 import { fieldToPlainText } from './manage-media';
+
+type PanelView = 'edit' | 'preview';
+
+/** Edit / Preview segmented control shown atop the detail panel. */
+function ViewTabs({
+  value,
+  onChange,
+}: {
+  value: PanelView;
+  onChange: (v: PanelView) => void;
+}) {
+  return (
+    <div className="inline-flex items-center gap-0.5 rounded-lg border border-milk-300/70 bg-milk-100/60 p-0.5">
+      {(['edit', 'preview'] as const).map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onChange(t)}
+          className={`rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors ${
+            value === t
+              ? 'bg-milk-50 text-ink-900 shadow-soft'
+              : 'text-ink-400 hover:text-ink-600'
+          }`}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /** Renders one rich editor per field. Editors are keyed by field name so they
  *  remount cleanly when the note type (and thus field set) changes. */
@@ -91,6 +122,7 @@ export function NoteEditPanel({
   const [values, setValues] = useState<NoteFields>(note.fields);
   const [baseline, setBaseline] = useState<NoteFields>(note.fields);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [view, setView] = useState<PanelView>('edit');
 
   const dirty = useMemo(
     () => fieldNames.some((n) => (values[n] ?? '') !== (baseline[n] ?? '')),
@@ -179,13 +211,23 @@ export function NoteEditPanel({
         </Popover>
       </div>
 
-      <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
-        <FieldStack
-          fieldNames={fieldNames}
-          values={values}
-          onChange={(name, html) => setValues((v) => ({ ...v, [name]: html }))}
-          onInit={handleFieldInit}
-        />
+      <div className="mt-4">
+        <ViewTabs value={view} onChange={setView} />
+      </div>
+
+      <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+        {view === 'edit' ? (
+          <FieldStack
+            fieldNames={fieldNames}
+            values={values}
+            onChange={(name, html) =>
+              setValues((v) => ({ ...v, [name]: html }))
+            }
+            onInit={handleFieldInit}
+          />
+        ) : (
+          <CardPreview fieldNames={fieldNames} values={values} />
+        )}
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-milk-200/70 pt-4">
@@ -246,6 +288,7 @@ export function AddNotePanel({
   // a note-type switch.
   const [resetKey, setResetKey] = useState(0);
   const [modelOpen, setModelOpen] = useState(false);
+  const [view, setView] = useState<PanelView>('edit');
 
   const firstFieldName = model?.fields[0];
   const firstEmpty = !fieldToPlainText(values[firstFieldName ?? ''] ?? '');
@@ -317,14 +360,24 @@ export function AddNotePanel({
         </Popover>
       </div>
 
-      <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
-        <FieldStack
-          key={`${model.name}-${resetKey}`}
-          fieldNames={model.fields}
-          values={values}
-          onChange={(name, html) => setValues((v) => ({ ...v, [name]: html }))}
-          autoFocusFirst
-        />
+      <div className="mt-4">
+        <ViewTabs value={view} onChange={setView} />
+      </div>
+
+      <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+        {view === 'edit' ? (
+          <FieldStack
+            key={`${model.name}-${resetKey}`}
+            fieldNames={model.fields}
+            values={values}
+            onChange={(name, html) =>
+              setValues((v) => ({ ...v, [name]: html }))
+            }
+            autoFocusFirst
+          />
+        ) : (
+          <CardPreview fieldNames={model.fields} values={values} />
+        )}
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-milk-200/70 pt-4">

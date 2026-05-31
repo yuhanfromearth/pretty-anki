@@ -1,4 +1,4 @@
-import type { NoteList, NoteModelList, NoteFields, AddNote } from '@nts/dtos';
+import type { NoteList, NoteModelList, NoteFields, AddNote } from '@nts/shared';
 
 async function readError(r: Response): Promise<string> {
   try {

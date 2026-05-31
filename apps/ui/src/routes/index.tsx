@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-import type { DeckStats, ReviewPace } from '@nts/dtos';
+import type { DeckStats, ReviewPace } from '@nts/shared';
 import { Greeting } from '#/components/home/greeting';
 import { PickUpCard } from '#/components/home/pick-up-card';
 import { DeckList } from '#/components/home/deck-list';
