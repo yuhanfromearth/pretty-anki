@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronsUpDown, Trash2, Save, Plus } from 'lucide-react';
 import type { Note, NoteModel, NoteFields } from '@nts/dtos';
@@ -18,11 +18,13 @@ function FieldStack({
   fieldNames,
   values,
   onChange,
+  onInit,
   autoFocusFirst,
 }: {
   fieldNames: string[];
   values: NoteFields;
   onChange: (name: string, html: string) => void;
+  onInit?: (name: string, html: string) => void;
   autoFocusFirst?: boolean;
 }) {
   return (
@@ -35,6 +37,7 @@ function FieldStack({
           <RichFieldEditor
             value={values[name] ?? ''}
             onChange={(html) => onChange(name, html)}
+            onInit={onInit ? (html) => onInit(name, html) : undefined}
             autoFocus={autoFocusFirst && i === 0}
           />
         </div>
@@ -95,6 +98,14 @@ export function NoteEditPanel({
   );
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
+
+  // The editor re-serializes content into its own canonical markup, which
+  // rarely matches Anki's stored HTML byte-for-byte. Baseline against that
+  // canonical form (emitted once on mount) so a no-op edit isn't seen as dirty.
+  const handleFieldInit = useCallback((name: string, html: string) => {
+    setBaseline((b) => (b[name] === html ? b : { ...b, [name]: html }));
+    setValues((v) => (v[name] === html ? v : { ...v, [name]: html }));
+  }, []);
 
   const save = useMutation({
     mutationFn: () => updateNote(note.noteId, values),
@@ -173,6 +184,7 @@ export function NoteEditPanel({
           fieldNames={fieldNames}
           values={values}
           onChange={(name, html) => setValues((v) => ({ ...v, [name]: html }))}
+          onInit={handleFieldInit}
         />
       </div>
 

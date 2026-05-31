@@ -39,6 +39,10 @@ function isMediaFile(file: File): boolean {
 interface RichFieldEditorProps {
   value: string;
   onChange: (ankiHtml: string) => void;
+  /** Fires once on mount with the editor's canonical serialization of `value`.
+   *  Lets callers baseline dirty-tracking against normalized markup so a
+   *  round-trip edit (type then delete) doesn't register as a change. */
+  onInit?: (ankiHtml: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
 }
@@ -55,6 +59,7 @@ const SWATCHES: { name: string; value: string }[] = [
 export function RichFieldEditor({
   value,
   onChange,
+  onInit,
   placeholder,
   autoFocus,
 }: RichFieldEditorProps) {
@@ -136,6 +141,7 @@ export function RichFieldEditor({
         return true;
       },
     },
+    onCreate: ({ editor }) => onInit?.(editorToAnkiHtml(editor.getHTML())),
     onUpdate: ({ editor }) => onChange(editorToAnkiHtml(editor.getHTML())),
   });
   editorRef.current = editor;
