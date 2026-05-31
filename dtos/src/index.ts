@@ -5,3 +5,4 @@ export * from './streak.js';
 export * from './review-pace.js';
 export * from './user-settings.js';
 export * from './review.js';
+export * from './note.js';

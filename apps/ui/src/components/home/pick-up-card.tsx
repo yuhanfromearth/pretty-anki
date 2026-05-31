@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, SlidersHorizontal } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { DeckStatsItem } from '@nts/dtos';
 
@@ -48,14 +48,24 @@ export function PickUpCard({ deck }: PickUpCardProps) {
                 </span>
               )}
             </div>
-            <Link
-              to="/review/$deckName"
-              params={{ deckName: deck.name }}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-mint-500 px-5 py-2.5 text-sm font-medium text-white dark:text-cocoa-950 shadow-soft transition-colors hover:bg-mint-700"
-            >
-              Start review
-              <ArrowRight className="size-4" />
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                to="/review/$deckName"
+                params={{ deckName: deck.name }}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-mint-500 px-5 py-2.5 text-sm font-medium text-white dark:text-cocoa-950 shadow-soft transition-colors hover:bg-mint-700"
+              >
+                Start review
+                <ArrowRight className="size-4" />
+              </Link>
+              <Link
+                to="/manage/$deckName"
+                params={{ deckName: deck.name }}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-milk-300/80 bg-milk-50/60 px-4 py-2.5 text-sm font-medium text-ink-700 transition-colors hover:border-mint-400 hover:text-mint-700"
+              >
+                <SlidersHorizontal className="size-4" />
+                Manage
+              </Link>
+            </div>
           </div>
           <div className="flex flex-col items-center gap-2">
             <div className="flex size-20 items-center justify-center rounded-full bg-milk-200/80 border border-milk-300/60 font-display text-3xl text-ink-700">

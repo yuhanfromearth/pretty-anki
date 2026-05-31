@@ -61,7 +61,7 @@ export function StreakHeatmap({ streak }: { streak: Streak }) {
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-0.5">
         <span className="font-display text-base font-semibold text-ink-900">
-          {days === 0 ? `${days} day streak :(` : `🔥 ${days} day streak`}
+          {days === 0 ? `${days} day streak :(` : `🌸 ${days} day streak`}
         </span>
         <span className="h-4 font-mono text-xs leading-4 text-ink-300">
           {hovered ? formatDay(hovered) : 'Last 6 months'}
@@ -69,7 +69,7 @@ export function StreakHeatmap({ streak }: { streak: Streak }) {
       </div>
 
       {/* Month labels: one slot per column, label sits above its first month. */}
-      <div className="flex gap-[4px] pl-px">
+      <div className="flex gap-1 pl-px">
         {columns.map((col, colIndex) => {
           const firstMonth = Number(col[0].date.split('-')[1]) - 1;
           const prevMonth =
@@ -78,9 +78,9 @@ export function StreakHeatmap({ streak }: { streak: Streak }) {
               : -1;
           const showLabel = firstMonth !== prevMonth;
           return (
-            <div key={colIndex} className="relative h-3.5 w-[14px]">
+            <div key={colIndex} className="relative h-3.5 w-3.5">
               {showLabel && (
-                <span className="absolute left-0 top-0 font-mono text-[11px] leading-[14px] text-ink-300 whitespace-nowrap">
+                <span className="absolute left-0 top-0 font-mono text-[11px] leading-3.5 text-ink-300 whitespace-nowrap">
                   {MONTHS[firstMonth]}
                 </span>
               )}
@@ -89,13 +89,13 @@ export function StreakHeatmap({ streak }: { streak: Streak }) {
         })}
       </div>
 
-      <div className="flex gap-[4px]">
+      <div className="flex gap-1">
         {columns.map((col, colIndex) => (
-          <div key={colIndex} className="flex flex-col gap-[4px]">
+          <div key={colIndex} className="flex flex-col gap-1">
             {Array.from({ length: 7 }, (_, row) => {
               const day = col[row];
               if (!day) {
-                return <div key={row} className="size-[14px]" />;
+                return <div key={row} className="size-3.5" />;
               }
               const isToday = day.date === todayStr;
               const style: React.CSSProperties = {
@@ -107,7 +107,7 @@ export function StreakHeatmap({ streak }: { streak: Streak }) {
               return (
                 <div
                   key={row}
-                  className={`size-[14px] rounded-[3px] ${
+                  className={`size-3.5 rounded-[3px] ${
                     isToday ? 'ring-1 ring-ink-700/40' : ''
                   }`}
                   style={style}

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ReviewDeckNameRouteImport } from './routes/review.$deckName'
+import { Route as ManageDeckNameRouteImport } from './routes/manage.$deckName'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,30 +23,39 @@ const ReviewDeckNameRoute = ReviewDeckNameRouteImport.update({
   path: '/review/$deckName',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManageDeckNameRoute = ManageDeckNameRouteImport.update({
+  id: '/manage/$deckName',
+  path: '/manage/$deckName',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/manage/$deckName': typeof ManageDeckNameRoute
   '/review/$deckName': typeof ReviewDeckNameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/manage/$deckName': typeof ManageDeckNameRoute
   '/review/$deckName': typeof ReviewDeckNameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/manage/$deckName': typeof ManageDeckNameRoute
   '/review/$deckName': typeof ReviewDeckNameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/review/$deckName'
+  fullPaths: '/' | '/manage/$deckName' | '/review/$deckName'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/review/$deckName'
-  id: '__root__' | '/' | '/review/$deckName'
+  to: '/' | '/manage/$deckName' | '/review/$deckName'
+  id: '__root__' | '/' | '/manage/$deckName' | '/review/$deckName'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ManageDeckNameRoute: typeof ManageDeckNameRoute
   ReviewDeckNameRoute: typeof ReviewDeckNameRoute
 }
 
@@ -65,11 +75,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewDeckNameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manage/$deckName': {
+      id: '/manage/$deckName'
+      path: '/manage/$deckName'
+      fullPath: '/manage/$deckName'
+      preLoaderRoute: typeof ManageDeckNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ManageDeckNameRoute: ManageDeckNameRoute,
   ReviewDeckNameRoute: ReviewDeckNameRoute,
 }
 export const routeTree = rootRouteImport

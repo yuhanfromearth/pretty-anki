@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type {
   DeckStats,
@@ -7,6 +7,10 @@ import type {
   ReviewPace,
   ReviewCard,
   ReviewSession,
+  Note,
+  NoteList,
+  NoteFields,
+  NoteModelList,
 } from '@nts/dtos';
 
 interface AnkiDeckStats {
@@ -17,6 +21,16 @@ interface AnkiDeckStats {
   review_count: number;
   total_in_deck: number;
 }
+
+interface AnkiNoteInfo {
+  noteId: number;
+  modelName: string;
+  tags: string[];
+  fields: Record<string, { value: string; order: number }>;
+}
+
+/** Notes returned by a single search are capped to keep payloads bounded. */
+const NOTE_SEARCH_LIMIT = 500;
 
 // cardReviews returns tuples: [id, cid, usn, ease, ivl, lastIvl, factor, time, type]
 type AnkiReviewTuple = [
@@ -264,12 +278,105 @@ export class AnkiConnectService {
     });
   }
 
+  async storeMediaFile(filename: string, dataBase64: string): Promise<string> {
+    // deleteExisting:false makes AnkiConnect generate a non-conflicting name
+    // instead of overwriting an existing media file with the same name.
+    return this.invoke<string>('storeMediaFile', {
+      filename,
+      data: dataBase64,
+      deleteExisting: false,
+    });
+  }
+
   async getMediaFile(filename: string): Promise<Buffer | null> {
     const b64 = await this.invoke<string | null>('retrieveMediaFile', {
       filename,
     });
     if (!b64) return null;
     return Buffer.from(b64, 'base64');
+  }
+
+  async getNotes(deckName: string, search?: string): Promise<NoteList> {
+    let query = `deck:"${this.escapeQuery(deckName)}"`;
+    const term = search?.trim();
+    if (term) {
+      query += ` "*${this.escapeQuery(term)}*"`;
+    }
+
+    const noteIds = await this.invoke<number[]>('findNotes', { query });
+    if (noteIds.length === 0) return { notes: [], truncated: false };
+
+    const truncated = noteIds.length > NOTE_SEARCH_LIMIT;
+    const infos = await this.invoke<AnkiNoteInfo[]>('notesInfo', {
+      notes: noteIds.slice(0, NOTE_SEARCH_LIMIT),
+    });
+
+    return { notes: infos.map((info) => this.toNote(info)), truncated };
+  }
+
+  async getModels(): Promise<NoteModelList> {
+    const names = await this.invoke<string[]>('modelNames');
+    const models = await Promise.all(
+      names.map(async (name) => ({
+        name,
+        fields: await this.invoke<string[]>('modelFieldNames', {
+          modelName: name,
+        }),
+      })),
+    );
+    return { models };
+  }
+
+  async addNote(
+    deckName: string,
+    modelName: string,
+    fields: NoteFields,
+    tags: string[] = [],
+  ): Promise<number> {
+    const note = { deckName, modelName, fields, tags };
+
+    // Strictly block duplicates: AnkiConnect's addNote also rejects them, but
+    // canAddNotes lets us return a clean 409 instead of a generic error string.
+    const [canAdd] = await this.invoke<boolean[]>('canAddNotes', {
+      notes: [note],
+    });
+    if (!canAdd) {
+      throw new ConflictException(
+        'A note with this first field already exists in this note type.',
+      );
+    }
+
+    return this.invoke<number>('addNote', { note });
+  }
+
+  async updateNoteFields(noteId: number, fields: NoteFields): Promise<void> {
+    await this.invoke<null>('updateNoteFields', {
+      note: { id: noteId, fields },
+    });
+  }
+
+  async deleteNotes(noteIds: number[]): Promise<void> {
+    await this.invoke<null>('deleteNotes', { notes: noteIds });
+  }
+
+  private toNote(info: AnkiNoteInfo): Note {
+    const ordered = Object.entries(info.fields).sort(
+      ([, a], [, b]) => a.order - b.order,
+    );
+    const fields: NoteFields = {};
+    for (const [name, field] of ordered) {
+      fields[name] = field.value;
+    }
+    return {
+      noteId: info.noteId,
+      modelName: info.modelName,
+      tags: info.tags,
+      fields,
+    };
+  }
+
+  private escapeQuery(value: string): string {
+    return value.replace(/["\\]/g, '\\$&');
   }
 
   private extractAudio(html: string): string[] {

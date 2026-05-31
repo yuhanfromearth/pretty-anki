@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { motion } from 'motion/react';
-import { ChevronUp, Check, Trash2 } from 'lucide-react';
+import { ChevronUp, Check, Trash2, SlidersHorizontal } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { DeckStatsItem } from '@nts/dtos';
 import {
@@ -147,6 +148,17 @@ export function DeckRow({
           </span>
         )}
       </div>
+
+      <Link
+        to="/manage/$deckName"
+        params={{ deckName: deck.name }}
+        onClick={(e) => e.stopPropagation()}
+        title="Manage deck"
+        aria-label="Manage deck"
+        className={`flex size-7 items-center justify-center rounded-md opacity-0 transition-all group-hover:opacity-100 ${isSelected ? 'text-white/60 hover:bg-white/15 hover:text-white dark:text-cocoa-950/60 dark:hover:bg-cocoa-950/15 dark:hover:text-cocoa-950' : 'text-ink-100 hover:bg-mint-500/10 hover:text-mint-700'}`}
+      >
+        <SlidersHorizontal className="size-3.5" />
+      </Link>
 
       <Dialog
         open={dialogOpen}
