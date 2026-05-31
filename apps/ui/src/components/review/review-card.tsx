@@ -25,6 +25,17 @@ function textLength(html: string): number {
   return html.replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, ' ').length;
 }
 
+// Hangul syllables/jamo plus the CJK range covering Hanja.
+const HANGUL_HANJA = /[ᄀ-ᇿ㄰-㆏가-힣一-鿿]/;
+
+// A single note can render either direction (Korean or English on the front),
+// so pick the typeface from the actual content rather than the card side:
+// Korean text gets the serif Hangul face, everything else the display serif.
+function fontFor(html: string): string {
+  const text = html.replace(/<[^>]*>/g, '');
+  return HANGUL_HANJA.test(text) ? 'font-korean' : 'font-display';
+}
+
 function questionSize(text: string): string {
   const len = textLength(text);
   if (len > 200) return 'text-lg';
@@ -174,7 +185,7 @@ export function ReviewCard({
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(234,219,200,0.3)_0%,transparent_60%)] dark:bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(247,236,210,0.05)_0%,transparent_60%)]" />
             <div className="relative flex h-full flex-col items-center justify-center px-10 py-10">
               <div
-                className={`text-center font-korean ${qSize} leading-tight text-ink-900`}
+                className={`text-center ${fontFor(question)} ${qSize} leading-tight text-ink-900`}
                 dangerouslySetInnerHTML={{ __html: question }}
               />
               {hasAudio && (
@@ -202,7 +213,7 @@ export function ReviewCard({
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(127,179,154,0.1)_0%,transparent_55%)] dark:bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(90,153,120,0.05)_0%,transparent_55%)]" />
             <div className="relative flex h-full flex-col items-center justify-center px-10 py-10">
               <div
-                className={`text-center font-korean ${backQSize} leading-tight text-ink-900`}
+                className={`text-center ${fontFor(question)} ${backQSize} leading-tight text-ink-900`}
                 dangerouslySetInnerHTML={{ __html: question }}
               />
               {hasAudio && (
@@ -221,7 +232,7 @@ export function ReviewCard({
               </span>
 
               <div
-                className={`mt-3 text-center font-display ${aSize} font-medium text-ink-900`}
+                className={`mt-3 text-center ${fontFor(answer)} ${aSize} font-medium text-ink-900`}
                 dangerouslySetInnerHTML={{ __html: answer }}
               />
             </div>
