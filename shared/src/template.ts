@@ -88,8 +88,23 @@ export const TemplateDetailSchema = z.object({
   layout: LayoutSchema,
   css: z.string().optional(),
   sampleNoteId: z.number().nullable(),
+  /** Live count of notes of this type — drives the destructive-remove warning. */
+  noteCount: z.number(),
 });
 export type TemplateDetail = z.infer<typeof TemplateDetailSchema>;
+
+/** One preview sample: a real note's field values, used to fill the builder
+ *  preview honestly (real glyphs, real lengths). */
+export const TemplateSampleSchema = z.object({
+  noteId: z.number(),
+  fields: z.record(z.string(), z.string()),
+});
+export type TemplateSample = z.infer<typeof TemplateSampleSchema>;
+
+export const TemplateSampleListSchema = z.object({
+  samples: z.array(TemplateSampleSchema),
+});
+export type TemplateSampleList = z.infer<typeof TemplateSampleListSchema>;
 
 /** Create a new note type (Anki `createModel`) and seed its layout. */
 export const CreateTemplateSchema = z.object({

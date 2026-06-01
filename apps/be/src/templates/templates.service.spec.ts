@@ -1,0 +1,141 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TemplateStore } from '@nts/shared';
+import { TemplatesService } from './templates.service.js';
+import type { AnkiConnectService } from '../anki/anki-connect.service.js';
+
+// In-memory stand-in for ~/.pretty-anki/templates.json.
+const state = vi.hoisted(() => ({ file: null as string | null }));
+
+vi.mock('node:fs/promises', () => ({
+  readFile: async () => {
+    if (state.file === null) throw new Error('ENOENT');
+    return state.file;
+  },
+  writeFile: async (_path: string, data: string) => {
+    state.file = data;
+  },
+  mkdir: async () => undefined,
+}));
+
+function seedStore(store: TemplateStore) {
+  state.file = JSON.stringify(store);
+}
+
+/** Minimal AnkiConnect double — only the methods the tested paths touch. */
+function fakeAnki(over: Partial<AnkiConnectService> = {}): AnkiConnectService {
+  return {
+    getModelsWithIds: vi.fn(async () => [{ name: 'Basic', id: 42 }]),
+    getModelFields: vi.fn(async () => ['Front', 'Back']),
+    isClozeModel: vi.fn(async () => false),
+    countNotesForModel: vi.fn(async () => 3),
+    addModelField: vi.fn(async () => undefined),
+    renameModelField: vi.fn(async () => undefined),
+    removeModelField: vi.fn(async () => undefined),
+    repositionModelField: vi.fn(async () => undefined),
+    createModel: vi.fn(async () => 99),
+    getNotesForModel: vi.fn(async () => []),
+    ...over,
+  } as unknown as AnkiConnectService;
+}
+
+const docWith = (front: string, back: string): TemplateStore => ({
+  '42': {
+    modelId: 42,
+    name: 'Basic',
+    layout: {
+      front: [{ id: 'f', field: front, role: 'heading' }],
+      back: [{ id: 'b', field: back, role: 'body' }],
+    },
+    sampleNoteId: null,
+  },
+});
+
+beforeEach(() => {
+  state.file = null;
+});
+
+describe('TemplatesService.applyFieldOp', () => {
+  it('rewrites block.field references atomically on rename', async () => {
+    seedStore(docWith('Front', 'Back'));
+    const anki = fakeAnki();
+    const svc = new TemplatesService(anki);
+
+    const detail = await svc.applyFieldOp(42, {
+      op: 'rename',
+      from: 'Front',
+      to: 'Word',
+    });
+
+    expect(anki.renameModelField).toHaveBeenCalledWith(
+      'Basic',
+      'Front',
+      'Word',
+    );
+    expect(detail.layout.front[0].field).toBe('Word');
+  });
+
+  it('cascades to drop blocks for a removed field', async () => {
+    seedStore(docWith('Front', 'Back'));
+    const anki = fakeAnki();
+    const svc = new TemplatesService(anki);
+
+    const detail = await svc.applyFieldOp(42, {
+      op: 'remove',
+      name: 'Back',
+      confirm: true,
+    });
+
+    expect(anki.removeModelField).toHaveBeenCalledWith('Basic', 'Back');
+    expect(detail.layout.back).toHaveLength(0);
+  });
+
+  it('refuses to remove the last field', async () => {
+    seedStore(docWith('Front', 'Back'));
+    const anki = fakeAnki({
+      getModelFields: vi.fn(async () => ['Only']),
+    });
+    const svc = new TemplatesService(anki);
+
+    await expect(
+      svc.applyFieldOp(42, { op: 'remove', name: 'Only', confirm: true }),
+    ).rejects.toThrow(/at least one field/);
+    expect(anki.removeModelField).not.toHaveBeenCalled();
+  });
+});
+
+describe('TemplatesService.resetLayout', () => {
+  it('drops the stored doc and falls back to a seeded layout', async () => {
+    seedStore(docWith('Front', 'Back'));
+    const svc = new TemplatesService(fakeAnki());
+
+    const detail = await svc.resetLayout(42);
+
+    // Seeded from live fields ['Front','Back'], not the custom stored layout.
+    expect(detail.layout.front).toEqual([
+      { id: 'heading:Front', field: 'Front', role: 'heading' },
+    ]);
+    expect(JSON.parse(state.file!)['42']).toBeUndefined();
+  });
+});
+
+describe('TemplatesService.list', () => {
+  it('flags customized types and surfaces orphans', async () => {
+    // Stored doc for id 7 no longer exists in Anki (only 42 is live).
+    seedStore({
+      '42': docWith('Front', 'Back')['42'],
+      '7': {
+        modelId: 7,
+        name: 'Gone',
+        layout: { front: [], back: [] },
+        sampleNoteId: null,
+      },
+    });
+    const svc = new TemplatesService(fakeAnki());
+
+    const { templates, orphans } = await svc.list();
+
+    expect(templates).toHaveLength(1);
+    expect(templates[0]).toMatchObject({ modelId: 42, customized: true });
+    expect(orphans).toEqual([{ modelId: 7, name: 'Gone' }]);
+  });
+});
