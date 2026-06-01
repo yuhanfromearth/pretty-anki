@@ -1,5 +1,7 @@
 # anki-ui
 
+![anki-ui](apps/ui/public/image.png)
+
 You like Anki but can't stand how it looks?
 
 > ⚠️ **Reality check:** no amount of prettiness will help you learn a language. In the end it comes down to putting in the hours, week after week after week. This just makes those hours a little nicer to look at.

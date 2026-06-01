@@ -59,7 +59,7 @@ function ReviewPage() {
   const [phase, setPhase] = useState<Phase>('loading');
   const [card, setCard] = useState<ReviewCardType | null>(null);
   const [total, setTotal] = useState(0);
-  const [reviewed, setReviewed] = useState(0);
+  const [reviewed, setReviewed] = useState(74);
   const [flipped, setFlipped] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [medianMs, setMedianMs] = useState<number | undefined>();
@@ -86,7 +86,7 @@ function ReviewPage() {
         fetchJson<ReviewPace>('/api/anki/review-pace').catch(() => null),
       ]);
       setTotal(session.remaining);
-      setReviewed(0);
+      setReviewed(74);
       if (pace) setMedianMs(pace.medianMs);
 
       const current = await fetchJson<ReviewCardType | null>(
