@@ -7,3 +7,6 @@ export * from './user-settings.js';
 export * from './review.js';
 export * from './note.js';
 export * from './card-html.js';
+export * from './template.js';
+export * from './sanitize-html.js';
+export * from './template-render.js';
