@@ -28,6 +28,8 @@ interface AnkiNoteInfo {
   modelName: string;
   tags: string[];
   fields: Record<string, { value: string; order: number }>;
+  /** Last modification time in epoch seconds (newer AnkiConnect builds). */
+  mod?: number;
 }
 
 /** Notes returned by a single search are capped to keep payloads bounded. */
@@ -387,6 +389,10 @@ export class AnkiConnectService {
       modelName: info.modelName,
       tags: info.tags,
       fields,
+      // Anki note IDs are the creation time in epoch milliseconds. `mod` is the
+      // modification time in epoch seconds; fall back to creation if absent.
+      created: info.noteId,
+      modified: info.mod != null ? info.mod * 1000 : info.noteId,
     };
   }
 

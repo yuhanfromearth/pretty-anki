@@ -8,6 +8,10 @@ export const NoteSchema = z.object({
   modelName: z.string(),
   tags: z.array(z.string()),
   fields: NoteFieldsSchema,
+  /** Creation time, epoch milliseconds. */
+  created: z.number(),
+  /** Last modification time, epoch milliseconds. */
+  modified: z.number(),
 });
 
 export const NoteListSchema = z.object({

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'motion/react';
 import { Check, ChevronsUpDown, Trash2, Save, Plus } from 'lucide-react';
 import type { Note, NoteModel, NoteFields } from '@nts/shared';
 import {
@@ -15,30 +16,60 @@ import { fieldToPlainText } from './manage-media';
 
 type PanelView = 'edit' | 'preview';
 
-/** Edit / Preview segmented control shown atop the detail panel. */
+/** Edit / Preview segmented control shown atop the detail panel. The active
+ *  pill slides between tabs via a shared `layoutId`. */
 function ViewTabs({
   value,
   onChange,
+  layoutId,
 }: {
   value: PanelView;
   onChange: (v: PanelView) => void;
+  layoutId: string;
 }) {
+  // Left/right arrows toggle the view, except while typing in a field (search
+  // input or a rich field editor) where arrows must move the caret instead.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const el = document.activeElement as HTMLElement | null;
+      if (
+        el &&
+        (el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.isContentEditable)
+      )
+        return;
+      onChange(e.key === 'ArrowLeft' ? 'edit' : 'preview');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onChange]);
+
   return (
     <div className="inline-flex items-center gap-0.5 rounded-lg border border-milk-300/70 bg-milk-100/60 p-0.5">
-      {(['edit', 'preview'] as const).map((t) => (
-        <button
-          key={t}
-          type="button"
-          onClick={() => onChange(t)}
-          className={`rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors ${
-            value === t
-              ? 'bg-milk-50 text-ink-900 shadow-soft'
-              : 'text-ink-400 hover:text-ink-600'
-          }`}
-        >
-          {t}
-        </button>
-      ))}
+      {(['edit', 'preview'] as const).map((t) => {
+        const active = value === t;
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => onChange(t)}
+            className={`relative rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors ${
+              active ? 'text-mint-700' : 'text-ink-400 hover:text-ink-600'
+            }`}
+          >
+            {active && (
+              <motion.span
+                layoutId={layoutId}
+                className="absolute inset-0 rounded-md bg-mint-500/15 ring-1 ring-inset ring-mint-500/30"
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              />
+            )}
+            <span className="relative z-10">{t}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -74,6 +105,33 @@ function FieldStack({
         </div>
       ))}
     </div>
+  );
+}
+
+const dateFmt = new Intl.DateTimeFormat(undefined, {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+
+function formatTimestamp(ms: number): string {
+  return dateFmt.format(new Date(ms));
+}
+
+/** Creation / modification dates shown atop the edit panel. */
+function NoteDates({
+  created,
+  modified,
+}: {
+  created: number;
+  modified: number;
+}) {
+  return (
+    <p className="mt-1.5 font-mono text-[11px] text-ink-300">
+      Created {formatTimestamp(created)}
+      <span className="mx-1.5 text-ink-200">·</span>
+      Modified {formatTimestamp(modified)}
+    </p>
   );
 }
 
@@ -211,8 +269,10 @@ export function NoteEditPanel({
         </Popover>
       </div>
 
+      <NoteDates created={note.created} modified={note.modified} />
+
       <div className="mt-4">
-        <ViewTabs value={view} onChange={setView} />
+        <ViewTabs value={view} onChange={setView} layoutId="edit-view-tab" />
       </div>
 
       <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
@@ -361,7 +421,7 @@ export function AddNotePanel({
       </div>
 
       <div className="mt-4">
-        <ViewTabs value={view} onChange={setView} />
+        <ViewTabs value={view} onChange={setView} layoutId="add-view-tab" />
       </div>
 
       <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">

@@ -1,8 +1,107 @@
-import { Search, Plus, Loader2 } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  Loader2,
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+  Check,
+} from 'lucide-react';
 import { motion } from 'motion/react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Note } from '@nts/shared';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '#/components/ui/popover';
 import { fieldToPlainText, hasCJK } from './manage-media';
+
+type SortKey =
+  | 'created-desc'
+  | 'created-asc'
+  | 'modified-desc'
+  | 'modified-asc'
+  | 'alpha-asc'
+  | 'alpha-desc';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'created-desc', label: 'Newest first' },
+  { key: 'created-asc', label: 'Oldest first' },
+  { key: 'modified-desc', label: 'Recently modified' },
+  { key: 'modified-asc', label: 'Least recently modified' },
+  { key: 'alpha-asc', label: 'Alphabetical (A–Z)' },
+  { key: 'alpha-desc', label: 'Alphabetical (Z–A)' },
+];
+
+const SORT_KEY = 'manage:sort';
+
+const primaryText = (note: Note) =>
+  fieldToPlainText(Object.values(note.fields)[0] ?? '');
+
+function sortNotes(notes: Note[], sort: SortKey): Note[] {
+  const arr = [...notes];
+  switch (sort) {
+    case 'created-asc':
+      return arr.sort((a, b) => a.created - b.created);
+    case 'created-desc':
+      return arr.sort((a, b) => b.created - a.created);
+    case 'modified-asc':
+      return arr.sort((a, b) => a.modified - b.modified);
+    case 'modified-desc':
+      return arr.sort((a, b) => b.modified - a.modified);
+    case 'alpha-asc':
+    case 'alpha-desc': {
+      const dir = sort === 'alpha-asc' ? 1 : -1;
+      return arr.sort(
+        (a, b) =>
+          dir *
+          primaryText(a).localeCompare(primaryText(b), undefined, {
+            sensitivity: 'base',
+          })
+      );
+    }
+  }
+}
+
+function SortMenu({
+  value,
+  onChange,
+}: {
+  value: SortKey;
+  onChange: (key: SortKey) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = SORT_OPTIONS.find((o) => o.key === value) ?? SORT_OPTIONS[0];
+  const SortIcon = value.endsWith('-desc')
+    ? ArrowDownWideNarrow
+    : ArrowUpNarrowWide;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-[10.5px] font-semibold tracking-wide uppercase text-ink-300 transition-colors hover:text-ink-500">
+        <SortIcon className="size-3" />
+        {active.label}
+      </PopoverTrigger>
+      <PopoverContent align="end" sideOffset={6} className="w-56 p-1">
+        {SORT_OPTIONS.map((o) => (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => {
+              onChange(o.key);
+              setOpen(false);
+            }}
+            className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-ink-700 transition-colors hover:bg-milk-200"
+          >
+            <Check
+              className={`size-3 shrink-0 ${o.key === value ? 'opacity-100' : 'opacity-0'}`}
+            />
+            {o.label}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 interface NoteListProps {
   notes: Note[];
@@ -31,6 +130,25 @@ export function NoteList({
   isFetching,
   truncated,
 }: NoteListProps) {
+  const [sort, setSort] = useState<SortKey>(() => {
+    if (typeof window === 'undefined') return 'created-desc';
+    const stored = localStorage.getItem(SORT_KEY) as SortKey | null;
+    return SORT_OPTIONS.some((o) => o.key === stored)
+      ? (stored as SortKey)
+      : 'created-desc';
+  });
+
+  const handleSortChange = (key: SortKey) => {
+    setSort(key);
+    try {
+      localStorage.setItem(SORT_KEY, key);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const sortedNotes = useMemo(() => sortNotes(notes, sort), [notes, sort]);
+
   return (
     <div className="flex min-h-0 flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -60,8 +178,12 @@ export function NoteList({
         </button>
       </div>
 
+      <div className="-my-1 -ml-2 flex items-center justify-start">
+        <SortMenu value={sort} onChange={handleSortChange} />
+      </div>
+
       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
-        {notes.length === 0 ? (
+        {sortedNotes.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-1 py-16 text-center">
             <p className="text-sm font-medium text-ink-500">No cards found</p>
             <p className="text-xs text-ink-300">
@@ -72,7 +194,7 @@ export function NoteList({
           </div>
         ) : (
           <ul className="flex flex-col gap-1">
-            {notes.map((note) => (
+            {sortedNotes.map((note) => (
               <NoteRow
                 key={note.noteId}
                 note={note}
