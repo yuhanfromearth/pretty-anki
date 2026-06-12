@@ -20,7 +20,8 @@ const noop = () => {};
  *  here too. Note types that have never been opened in the builder fall back to
  *  the legacy flat rendering: first field → question, all remaining fields →
  *  answer, run through the same `stripHtml` the review pipeline uses. Audio is
- *  gathered from every field. The edit affordance and hover tilt are suppressed
+ *  attributed by side (front field vs. the rest) so a back-only sound doesn't
+ *  surface on the front. The edit affordance and hover tilt are suppressed
  *  since this is a static, read-only preview. */
 export function CardPreview({
   modelName,
@@ -69,7 +70,15 @@ export function CardPreview({
         .join('<br>'),
     [values, fieldNames]
   );
-  const audio = useMemo(
+  // Audio is attributed by side to match the review screen: the front carries
+  // only its own field's sound, while the back (which repeats the front) gets
+  // every sound. This keeps a back-only audio field from showing a play button
+  // on the front.
+  const questionAudio = useMemo(
+    () => extractAudio(values[fieldNames[0]] ?? ''),
+    [values, fieldNames]
+  );
+  const answerAudio = useMemo(
     () => Object.values(values).flatMap((v) => extractAudio(v)),
     [values]
   );
@@ -111,7 +120,8 @@ export function CardPreview({
     deckName: '',
     question,
     answer,
-    audio,
+    questionAudio,
+    answerAudio,
     dismiss: null,
     tilt: false,
     showEdit: false,

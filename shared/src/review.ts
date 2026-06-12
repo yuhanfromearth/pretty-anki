@@ -8,7 +8,11 @@ export const ReviewCardSchema = z.object({
   deckName: z.string(),
   buttons: z.array(z.number().int().min(1).max(4)),
   nextReviews: z.array(z.string()),
-  audio: z.array(z.string()),
+  // Audio is split by side so a sound that lives only on the back never shows a
+  // play button on the front. The back replays the front (answer = FrontSide +
+  // back), so its list is a superset of the front's.
+  questionAudio: z.array(z.string()),
+  answerAudio: z.array(z.string()),
 });
 
 export const AnswerCardSchema = z.object({

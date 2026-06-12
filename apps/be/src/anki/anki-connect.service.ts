@@ -253,7 +253,7 @@ export class AnkiConnectService {
       });
 
       const fieldEntries = Object.entries(card.fields);
-      const audio = fieldEntries.flatMap(([, f]) => extractAudio(f.value));
+      const allAudio = fieldEntries.flatMap(([, f]) => extractAudio(f.value));
 
       // Use the template-rendered question/answer rather than reconstructing
       // from note fields by position: a single note can produce multiple cards
@@ -265,6 +265,16 @@ export class AnkiConnectService {
         card.answer.split(/<hr id=?["']?answer["']?\s*\/?>/i)[1] ?? card.answer;
       const answer = stripHtml(answerBack);
 
+      // Only attribute audio to the front when the rendered question side
+      // actually references it — Anki marks sounds with `[anki:play:q:N]`
+      // (question) / `[anki:play:a:N]` (answer) placeholders, or leaves the raw
+      // `[sound:...]` form. Without this gate a sound that lives only on a back
+      // field would show a play button on the front. The back replays the
+      // front too, so it gets every sound.
+      const questionHasAudio = /\[anki:play:q:|\[sound:/.test(card.question);
+      const questionAudio = questionHasAudio ? allAudio : [];
+      const answerAudio = allAudio;
+
       return {
         cardId: card.cardId,
         noteId,
@@ -273,7 +283,8 @@ export class AnkiConnectService {
         deckName: card.deckName,
         buttons: card.buttons,
         nextReviews: card.nextReviews ?? [],
-        audio,
+        questionAudio,
+        answerAudio,
       };
     } catch {
       return null;

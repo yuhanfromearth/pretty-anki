@@ -14,7 +14,8 @@ interface ReviewCardProps {
   deckName: string;
   question: string;
   answer: string;
-  audio: string[];
+  questionAudio: string[];
+  answerAudio: string[];
   flipped: boolean;
   dismiss: CardDismiss | null;
   tilt?: boolean;
@@ -87,7 +88,8 @@ export function ReviewCard({
   deckName,
   question,
   answer,
-  audio,
+  questionAudio,
+  answerAudio,
   flipped,
   dismiss,
   tilt = true,
@@ -110,23 +112,26 @@ export function ReviewCard({
     audioRef.current = null;
   }, [cardId]);
 
-  const playAudio = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (!audio.length) return;
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play();
-        return;
-      }
-      const el = new Audio(`/api/anki/media/${encodeURIComponent(audio[0])}`);
-      audioRef.current = el;
-      el.play();
-    },
-    [audio]
-  );
+  const playAudio = useCallback((e: React.MouseEvent, files: string[]) => {
+    e.stopPropagation();
+    if (!files.length) return;
+    const src = `/api/anki/media/${encodeURIComponent(files[0])}`;
+    // Front and back can reference different sounds, so reuse the cached
+    // element only when its source matches.
+    if (audioRef.current && audioRef.current.dataset.src === src) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+      return;
+    }
+    audioRef.current?.pause();
+    const el = new Audio(src);
+    el.dataset.src = src;
+    audioRef.current = el;
+    el.play();
+  }, []);
 
-  const hasAudio = audio.length > 0;
+  const hasQuestionAudio = questionAudio.length > 0;
+  const hasAnswerAudio = answerAudio.length > 0;
 
   return (
     <div
@@ -192,9 +197,9 @@ export function ReviewCard({
                 className={`text-center ${fontFor(question)} ${qSize} leading-tight text-ink-900`}
                 dangerouslySetInnerHTML={{ __html: question }}
               />
-              {hasAudio && (
+              {hasQuestionAudio && (
                 <button
-                  onClick={playAudio}
+                  onClick={(e) => playAudio(e, questionAudio)}
                   className="mt-6 flex size-10 items-center justify-center rounded-full border border-milk-300/80 bg-milk-100/80 text-ink-400 transition-colors hover:bg-milk-200 hover:text-ink-600 active:scale-95"
                 >
                   <Volume2 className="size-4" />
@@ -220,9 +225,9 @@ export function ReviewCard({
                 className={`text-center ${fontFor(question)} ${backQSize} leading-tight text-ink-900`}
                 dangerouslySetInnerHTML={{ __html: question }}
               />
-              {hasAudio && (
+              {hasAnswerAudio && (
                 <button
-                  onClick={playAudio}
+                  onClick={(e) => playAudio(e, answerAudio)}
                   className="mt-4 flex size-9 items-center justify-center rounded-full border border-milk-300/80 bg-milk-100/80 text-ink-400 transition-colors hover:bg-milk-200 hover:text-ink-600 active:scale-95"
                 >
                   <Volume2 className="size-3.5" />

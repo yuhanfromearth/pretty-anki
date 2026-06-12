@@ -258,7 +258,8 @@ function ReviewPage() {
           deckName={decoded}
           question={card.question}
           answer={card.answer}
-          audio={card.audio}
+          questionAudio={card.questionAudio}
+          answerAudio={card.answerAudio}
           flipped={flipped}
           dismiss={dismiss}
           tilt={cardTilt}
