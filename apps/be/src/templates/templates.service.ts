@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import {
   TemplateStoreSchema,
+  compileLayoutToAnki,
   seedLayout,
   type CreateTemplate,
   type FieldOp,
@@ -50,6 +51,34 @@ export class TemplatesService {
   private async writeStore(store: TemplateStore): Promise<void> {
     await mkdir(STORE_DIR, { recursive: true });
     await writeFile(STORE_FILE, JSON.stringify(store, null, 2), 'utf-8');
+  }
+
+  /** Compile the app-native layout into the note type's Anki card template + CSS
+   *  and write it back into the collection, so the design persists in Anki and
+   *  exports with the deck. Called on every layout-affecting save. Skips Cloze
+   *  types (they stay on Anki's own cloze templates) and layouts with an empty
+   *  front (Anki rejects a blank question). Overwrites the note type's first
+   *  card template and its shared CSS — intended: saving in the builder *is* the
+   *  user applying their design to the note type. */
+  private async publishToAnki(
+    modelName: string,
+    layout: Layout,
+    css: string | undefined,
+  ): Promise<void> {
+    if (layout.front.length === 0) return;
+    if (await this.anki.isClozeModel(modelName)) return;
+
+    const [existing] = await this.anki.getModelTemplateNames(modelName);
+    const { css: compiledCss, cardTemplates } = compileLayoutToAnki(
+      layout,
+      css,
+      existing ?? 'Card 1',
+    );
+    const [card] = cardTemplates;
+    await this.anki.updateModelTemplates(modelName, {
+      [card.Name]: { Front: card.Front, Back: card.Back },
+    });
+    await this.anki.updateModelStyling(modelName, compiledCss);
   }
 
   /** List every note type as a Template, flagging which have a saved layout,
@@ -129,6 +158,7 @@ export class TemplatesService {
     const store = await this.readStore();
     store[String(modelId)] = doc;
     await this.writeStore(store);
+    await this.publishToAnki(input.name, doc.layout, undefined);
     return this.detail(modelId);
   }
 
@@ -184,10 +214,13 @@ export class TemplatesService {
 
     store[String(modelId)] = { ...doc, name, layout };
     await this.writeStore(store);
+    await this.publishToAnki(name, layout, doc.css);
     return this.detail(modelId);
   }
 
-  /** Persist layout / custom CSS / sample after edits in the builder. */
+  /** Persist layout / custom CSS / sample after edits in the builder, and
+   *  compile the layout into the note type's Anki card template + CSS so the
+   *  design lands in the collection and exports with the deck. */
   async updateLayout(
     modelId: number,
     input: UpdateLayout,
@@ -202,6 +235,7 @@ export class TemplatesService {
       sampleNoteId: input.sampleNoteId,
     };
     await this.writeStore(store);
+    await this.publishToAnki(name, input.layout, input.css);
     return this.detail(modelId);
   }
 

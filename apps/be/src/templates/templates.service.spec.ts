@@ -34,6 +34,9 @@ function fakeAnki(over: Partial<AnkiConnectService> = {}): AnkiConnectService {
     repositionModelField: vi.fn(async () => undefined),
     createModel: vi.fn(async () => 99),
     getNotesForModel: vi.fn(async () => []),
+    getModelTemplateNames: vi.fn(async () => ['Card 1']),
+    updateModelTemplates: vi.fn(async () => undefined),
+    updateModelStyling: vi.fn(async () => undefined),
     ...over,
   } as unknown as AnkiConnectService;
 }
@@ -72,6 +75,24 @@ describe('TemplatesService.applyFieldOp', () => {
       'Word',
     );
     expect(detail.layout.front[0].field).toBe('Word');
+    // The renamed layout is compiled and pushed back into the Anki note type.
+    expect(anki.updateModelTemplates).toHaveBeenCalledWith('Basic', {
+      'Card 1': {
+        Front: '{{#Word}}<div class="blk role-heading">{{Word}}</div>{{/Word}}',
+        Back: '{{#Back}}<div class="blk role-body">{{Back}}</div>{{/Back}}',
+      },
+    });
+    expect(anki.updateModelStyling).toHaveBeenCalled();
+  });
+
+  it('skips the Anki push for Cloze types', async () => {
+    seedStore(docWith('Front', 'Back'));
+    const anki = fakeAnki({ isClozeModel: vi.fn(async () => true) });
+    const svc = new TemplatesService(anki);
+
+    await svc.applyFieldOp(42, { op: 'rename', from: 'Front', to: 'Word' });
+
+    expect(anki.updateModelTemplates).not.toHaveBeenCalled();
   });
 
   it('cascades to drop blocks for a removed field', async () => {

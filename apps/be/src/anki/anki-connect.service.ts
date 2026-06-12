@@ -385,6 +385,34 @@ export class AnkiConnectService {
     );
   }
 
+  /** Card-template names of a note type, in Anki's order. The builder is
+   *  single-card, so callers overwrite the first one. */
+  async getModelTemplateNames(modelName: string): Promise<string[]> {
+    const templates = await this.invoke<Record<string, unknown>>(
+      'modelTemplates',
+      { modelName },
+    );
+    return Object.keys(templates);
+  }
+
+  /** Overwrite a note type's card templates (Front/Back HTML), keyed by template
+   *  name. Persists into the Anki collection, so it exports with the deck. */
+  async updateModelTemplates(
+    modelName: string,
+    templates: Record<string, { Front: string; Back: string }>,
+  ): Promise<void> {
+    await this.invoke<null>('updateModelTemplates', {
+      model: { name: modelName, templates },
+    });
+  }
+
+  /** Overwrite a note type's shared CSS. Persists into the Anki collection. */
+  async updateModelStyling(modelName: string, css: string): Promise<void> {
+    await this.invoke<null>('updateModelStyling', {
+      model: { name: modelName, css },
+    });
+  }
+
   /** Create a new note type with the given fields and a minimal pass-through
    *  card template, so Anki stays valid and the `stripHtml` review fallback
    *  works before any app-native layout exists. */

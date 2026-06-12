@@ -10,3 +10,4 @@ export * from './card-html.js';
 export * from './template.js';
 export * from './sanitize-html.js';
 export * from './template-render.js';
+export * from './template-compile.js';
