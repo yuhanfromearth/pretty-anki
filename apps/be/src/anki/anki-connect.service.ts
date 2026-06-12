@@ -240,6 +240,7 @@ export class AnkiConnectService {
         cardId: number;
         question: string;
         answer: string;
+        modelName: string;
         fields: Record<string, { value: string; order: number }>;
         deckName: string;
         buttons: number[];
@@ -254,6 +255,10 @@ export class AnkiConnectService {
 
       const fieldEntries = Object.entries(card.fields);
       const allAudio = fieldEntries.flatMap(([, f]) => extractAudio(f.value));
+      // Raw field values keyed by name, for the app-native Template renderer.
+      const fields = Object.fromEntries(
+        fieldEntries.map(([name, f]) => [name, f.value]),
+      );
 
       // Use the template-rendered question/answer rather than reconstructing
       // from note fields by position: a single note can produce multiple cards
@@ -278,6 +283,7 @@ export class AnkiConnectService {
       return {
         cardId: card.cardId,
         noteId,
+        modelName: card.modelName,
         question,
         answer,
         deckName: card.deckName,
@@ -285,6 +291,7 @@ export class AnkiConnectService {
         nextReviews: card.nextReviews ?? [],
         questionAudio,
         answerAudio,
+        fields,
       };
     } catch {
       return null;
