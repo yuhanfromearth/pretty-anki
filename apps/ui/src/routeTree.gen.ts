@@ -9,14 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TemplatesIndexRouteImport } from './routes/templates.index'
+import { Route as TemplatesModelIdRouteImport } from './routes/templates.$modelId'
 import { Route as ReviewDeckNameRouteImport } from './routes/review.$deckName'
 import { Route as ManageDeckNameRouteImport } from './routes/manage.$deckName'
 
+const TemplatesRoute = TemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const TemplatesIndexRoute = TemplatesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TemplatesRoute,
+} as any)
+const TemplatesModelIdRoute = TemplatesModelIdRouteImport.update({
+  id: '/$modelId',
+  path: '/$modelId',
+  getParentRoute: () => TemplatesRoute,
 } as any)
 const ReviewDeckNameRoute = ReviewDeckNameRouteImport.update({
   id: '/review/$deckName',
@@ -31,42 +49,90 @@ const ManageDeckNameRoute = ManageDeckNameRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/templates': typeof TemplatesRouteWithChildren
   '/manage/$deckName': typeof ManageDeckNameRoute
   '/review/$deckName': typeof ReviewDeckNameRoute
+  '/templates/$modelId': typeof TemplatesModelIdRoute
+  '/templates/': typeof TemplatesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/manage/$deckName': typeof ManageDeckNameRoute
   '/review/$deckName': typeof ReviewDeckNameRoute
+  '/templates/$modelId': typeof TemplatesModelIdRoute
+  '/templates': typeof TemplatesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/templates': typeof TemplatesRouteWithChildren
   '/manage/$deckName': typeof ManageDeckNameRoute
   '/review/$deckName': typeof ReviewDeckNameRoute
+  '/templates/$modelId': typeof TemplatesModelIdRoute
+  '/templates/': typeof TemplatesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/manage/$deckName' | '/review/$deckName'
+  fullPaths:
+    | '/'
+    | '/templates'
+    | '/manage/$deckName'
+    | '/review/$deckName'
+    | '/templates/$modelId'
+    | '/templates/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/manage/$deckName' | '/review/$deckName'
-  id: '__root__' | '/' | '/manage/$deckName' | '/review/$deckName'
+  to:
+    | '/'
+    | '/manage/$deckName'
+    | '/review/$deckName'
+    | '/templates/$modelId'
+    | '/templates'
+  id:
+    | '__root__'
+    | '/'
+    | '/templates'
+    | '/manage/$deckName'
+    | '/review/$deckName'
+    | '/templates/$modelId'
+    | '/templates/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  TemplatesRoute: typeof TemplatesRouteWithChildren
   ManageDeckNameRoute: typeof ManageDeckNameRoute
   ReviewDeckNameRoute: typeof ReviewDeckNameRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/templates': {
+      id: '/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof TemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/templates/': {
+      id: '/templates/'
+      path: '/'
+      fullPath: '/templates/'
+      preLoaderRoute: typeof TemplatesIndexRouteImport
+      parentRoute: typeof TemplatesRoute
+    }
+    '/templates/$modelId': {
+      id: '/templates/$modelId'
+      path: '/$modelId'
+      fullPath: '/templates/$modelId'
+      preLoaderRoute: typeof TemplatesModelIdRouteImport
+      parentRoute: typeof TemplatesRoute
     }
     '/review/$deckName': {
       id: '/review/$deckName'
@@ -85,8 +151,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface TemplatesRouteChildren {
+  TemplatesModelIdRoute: typeof TemplatesModelIdRoute
+  TemplatesIndexRoute: typeof TemplatesIndexRoute
+}
+
+const TemplatesRouteChildren: TemplatesRouteChildren = {
+  TemplatesModelIdRoute: TemplatesModelIdRoute,
+  TemplatesIndexRoute: TemplatesIndexRoute,
+}
+
+const TemplatesRouteWithChildren = TemplatesRoute._addFileChildren(
+  TemplatesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TemplatesRoute: TemplatesRouteWithChildren,
   ManageDeckNameRoute: ManageDeckNameRoute,
   ReviewDeckNameRoute: ReviewDeckNameRoute,
 }

@@ -344,6 +344,113 @@ export class AnkiConnectService {
     return { models };
   }
 
+  /** Note types with their stable numeric ids — the key the Template store uses
+   *  so a rename in Anki doesn't orphan a layout. */
+  async getModelsWithIds(): Promise<{ name: string; id: number }[]> {
+    const map = await this.invoke<Record<string, number>>('modelNamesAndIds');
+    return Object.entries(map).map(([name, id]) => ({ name, id }));
+  }
+
+  async getModelFields(modelName: string): Promise<string[]> {
+    return this.invoke<string[]>('modelFieldNames', { modelName });
+  }
+
+  /** Detect Cloze note types by inspecting their card templates for a
+   *  `{{cloze:...}}` reference. Version-safe across AnkiConnect builds (avoids
+   *  relying on the newer findModelsByName `type` field). */
+  async isClozeModel(modelName: string): Promise<boolean> {
+    const templates = await this.invoke<
+      Record<string, { Front: string; Back: string }>
+    >('modelTemplates', { modelName });
+    return Object.values(templates).some(
+      (t) => /\{\{\s*cloze:/i.test(t.Front) || /\{\{\s*cloze:/i.test(t.Back),
+    );
+  }
+
+  /** Create a new note type with the given fields and a minimal pass-through
+   *  card template, so Anki stays valid and the `stripHtml` review fallback
+   *  works before any app-native layout exists. */
+  async createModel(name: string, fields: string[]): Promise<number> {
+    const [first, ...rest] = fields;
+    const back = [
+      '{{FrontSide}}',
+      '<hr id=answer>',
+      ...rest.map((f) => `{{${f}}}`),
+    ].join('\n');
+    const result = await this.invoke<{ id?: number }>('createModel', {
+      modelName: name,
+      inOrderFields: fields,
+      css: '',
+      isCloze: false,
+      cardTemplates: [
+        { Name: 'Card 1', Front: first ? `{{${first}}}` : '', Back: back },
+      ],
+    });
+    // createModel returns the full model object on most builds; resolve the id
+    // robustly via modelNamesAndIds rather than trusting the shape.
+    if (typeof result?.id === 'number') return result.id;
+    const map = await this.invoke<Record<string, number>>('modelNamesAndIds');
+    return map[name];
+  }
+
+  async addModelField(modelName: string, fieldName: string): Promise<void> {
+    await this.invoke<null>('modelFieldAdd', { modelName, fieldName });
+  }
+
+  async renameModelField(
+    modelName: string,
+    oldFieldName: string,
+    newFieldName: string,
+  ): Promise<void> {
+    await this.invoke<null>('modelFieldRename', {
+      modelName,
+      oldFieldName,
+      newFieldName,
+    });
+  }
+
+  async removeModelField(modelName: string, fieldName: string): Promise<void> {
+    await this.invoke<null>('modelFieldRemove', { modelName, fieldName });
+  }
+
+  async repositionModelField(
+    modelName: string,
+    fieldName: string,
+    index: number,
+  ): Promise<void> {
+    await this.invoke<null>('modelFieldReposition', {
+      modelName,
+      fieldName,
+      index,
+    });
+  }
+
+  /** Number of notes of a note type, by stable model id. */
+  async countNotesForModel(modelId: number): Promise<number> {
+    const ids = await this.invoke<number[]>('findNotes', {
+      query: `mid:${modelId}`,
+    });
+    return ids.length;
+  }
+
+  /** A bounded set of real notes of a type, for the builder preview sampler. */
+  async getNotesForModel(
+    modelId: number,
+    limit: number,
+  ): Promise<{ noteId: number; fields: NoteFields }[]> {
+    const ids = await this.invoke<number[]>('findNotes', {
+      query: `mid:${modelId}`,
+    });
+    if (ids.length === 0) return [];
+    const infos = await this.invoke<AnkiNoteInfo[]>('notesInfo', {
+      notes: ids.slice(0, limit),
+    });
+    return infos.map((info) => {
+      const note = this.toNote(info);
+      return { noteId: note.noteId, fields: note.fields };
+    });
+  }
+
   async addNote(
     deckName: string,
     modelName: string,
