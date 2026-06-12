@@ -118,6 +118,77 @@ describe('TemplatesService.resetLayout', () => {
   });
 });
 
+describe('TemplatesService.defaultSample', () => {
+  const storeWithSample = (sampleNoteId: number | null): TemplateStore => ({
+    '42': { ...docWith('Front', 'Back')['42'], sampleNoteId },
+  });
+
+  it('returns the saved sample when it still exists', async () => {
+    seedStore(storeWithSample(100));
+    const anki = fakeAnki({
+      getNoteForModel: vi.fn(async () => ({
+        noteId: 100,
+        fields: { Front: '안녕', Back: 'hi' },
+      })),
+      getNotesForModel: vi.fn(async () => []),
+    });
+    const svc = new TemplatesService(anki);
+
+    const { sample } = await svc.defaultSample(42);
+
+    expect(sample?.noteId).toBe(100);
+    expect(anki.getNoteForModel).toHaveBeenCalledWith(42, 100);
+    // No need to fall back to the first note.
+    expect(anki.getNotesForModel).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the first note when the saved sample is gone', async () => {
+    seedStore(storeWithSample(100));
+    const anki = fakeAnki({
+      getNoteForModel: vi.fn(async () => null),
+      getNotesForModel: vi.fn(async () => [{ noteId: 200, fields: {} }]),
+    });
+    const svc = new TemplatesService(anki);
+
+    const { sample } = await svc.defaultSample(42);
+
+    expect(sample?.noteId).toBe(200);
+    expect(anki.getNotesForModel).toHaveBeenCalledWith(42, 1);
+  });
+
+  it('returns null when the type has no notes', async () => {
+    seedStore(storeWithSample(null));
+    const anki = fakeAnki({ getNotesForModel: vi.fn(async () => []) });
+    const svc = new TemplatesService(anki);
+
+    expect(await svc.defaultSample(42)).toEqual({ sample: null });
+  });
+});
+
+describe('TemplatesService.samples', () => {
+  it('returns nothing for an empty search without querying Anki', async () => {
+    seedStore(docWith('Front', 'Back'));
+    const anki = fakeAnki({ getNotesForModel: vi.fn(async () => []) });
+    const svc = new TemplatesService(anki);
+
+    expect(await svc.samples(42, '  ')).toEqual({ samples: [] });
+    expect(anki.getNotesForModel).not.toHaveBeenCalled();
+  });
+
+  it('passes the search term through, capped', async () => {
+    seedStore(docWith('Front', 'Back'));
+    const anki = fakeAnki({
+      getNotesForModel: vi.fn(async () => [{ noteId: 5, fields: {} }]),
+    });
+    const svc = new TemplatesService(anki);
+
+    const { samples } = await svc.samples(42, 'an');
+
+    expect(samples).toHaveLength(1);
+    expect(anki.getNotesForModel).toHaveBeenCalledWith(42, 25, 'an');
+  });
+});
+
 describe('TemplatesService.list', () => {
   it('flags customized types and surfaces orphans', async () => {
     // Stored doc for id 7 no longer exists in Anki (only 42 is live).

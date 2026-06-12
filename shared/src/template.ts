@@ -106,6 +106,14 @@ export const TemplateSampleListSchema = z.object({
 });
 export type TemplateSampleList = z.infer<typeof TemplateSampleListSchema>;
 
+/** The single default preview sample: the saved `sampleNoteId` (if it still
+ *  exists for this type), else the first note, else null when the type has no
+ *  notes (the builder falls back to field-name placeholders). */
+export const TemplateDefaultSampleSchema = z.object({
+  sample: TemplateSampleSchema.nullable(),
+});
+export type TemplateDefaultSample = z.infer<typeof TemplateDefaultSampleSchema>;
+
 /** Create a new note type (Anki `createModel`) and seed its layout. */
 export const CreateTemplateSchema = z.object({
   name: z.string().min(1),

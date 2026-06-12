@@ -134,40 +134,42 @@ function BuilderPage() {
       )}
 
       <div className="grid min-h-0 flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
-        {/* Editor — scrolls independently when tall */}
-        <div className="flex flex-col gap-6 overflow-y-auto pr-1 pb-8">
-          <FieldPanel
-            modelId={modelId}
-            fields={fields}
-            noteCount={detail.noteCount}
-            onApplied={onFieldApplied}
-          />
-          <div className="flex flex-col gap-6">
-            <BlockStack
-              label="Front"
-              blocks={layout.front}
+        {/* Editor — vertically centered, scrolls from the top when it overflows */}
+        <div className="flex flex-col overflow-y-auto pr-1">
+          <div className="my-auto flex flex-col gap-6 pt-1 pb-20">
+            <FieldPanel
+              modelId={modelId}
               fields={fields}
-              onChange={(b) => setSide('front', b)}
+              noteCount={detail.noteCount}
+              onApplied={onFieldApplied}
             />
-            <BlockStack
-              label="Back"
-              blocks={layout.back}
-              fields={fields}
-              onChange={(b) => setSide('back', b)}
+            <div className="flex flex-col gap-6">
+              <BlockStack
+                label="Front"
+                blocks={layout.front}
+                fields={fields}
+                onChange={(b) => setSide('front', b)}
+              />
+              <BlockStack
+                label="Back"
+                blocks={layout.back}
+                fields={fields}
+                onChange={(b) => setSide('back', b)}
+              />
+            </div>
+            <CustomCss
+              value={css}
+              onChange={(v) => {
+                setCss(v);
+                edited();
+              }}
             />
           </div>
-          <CustomCss
-            value={css}
-            onChange={(v) => {
-              setCss(v);
-              edited();
-            }}
-          />
         </div>
 
         {/* Preview — vertically centered, scrolls only if it overflows */}
         <div className="flex flex-col overflow-y-auto">
-          <div className="my-auto">
+          <div className="my-auto pb-20">
             <TemplatePreview
               modelId={modelId}
               fields={fields}

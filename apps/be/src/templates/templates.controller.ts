@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -13,6 +14,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -20,6 +22,7 @@ import { FieldOpSchema, type FieldOp } from '@nts/shared';
 import { TemplatesService } from './templates.service.js';
 import {
   CreateTemplateDto,
+  TemplateDefaultSampleDto,
   TemplateDetailDto,
   TemplateSampleListDto,
   TemplateSummaryListDto,
@@ -87,11 +90,27 @@ export class TemplatesController {
     return this.templates.resetLayout(modelId);
   }
 
-  @Get(':modelId/samples')
-  @ApiOperation({ summary: 'Real notes of this type for the preview sampler' })
+  @Get(':modelId/sample')
+  @ApiOperation({ summary: 'The single default preview sample for this type' })
   @ApiParam({ name: 'modelId', description: 'Anki note type id' })
+  @ApiOkResponse({ type: TemplateDefaultSampleDto })
+  defaultSample(@Param('modelId', ParseIntPipe) modelId: number) {
+    return this.templates.defaultSample(modelId);
+  }
+
+  @Get(':modelId/samples')
+  @ApiOperation({ summary: 'Search notes of this type for the preview picker' })
+  @ApiParam({ name: 'modelId', description: 'Anki note type id' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Field text match',
+  })
   @ApiOkResponse({ type: TemplateSampleListDto })
-  samples(@Param('modelId', ParseIntPipe) modelId: number) {
-    return this.templates.samples(modelId);
+  samples(
+    @Param('modelId', ParseIntPipe) modelId: number,
+    @Query('search') search?: string,
+  ) {
+    return this.templates.samples(modelId, search);
   }
 }

@@ -13,6 +13,7 @@ import {
   type CreateTemplate,
   type FieldOp,
   type Layout,
+  type TemplateDefaultSample,
   type TemplateDetail,
   type TemplateDoc,
   type TemplateSampleList,
@@ -25,8 +26,8 @@ import { AnkiConnectService } from '../anki/anki-connect.service.js';
 const STORE_DIR = join(homedir(), '.pretty-anki');
 const STORE_FILE = join(STORE_DIR, 'templates.json');
 
-/** Number of real notes offered to the builder preview sampler. */
-const SAMPLE_LIMIT = 10;
+/** Max search matches returned to the builder preview picker. */
+const SAMPLE_LIMIT = 25;
 
 /** Owns the app-native Template layout store (`~/.pretty-anki/templates.json`,
  *  whole-file read/write like SettingsService) and joins it with live note-type
@@ -213,9 +214,33 @@ export class TemplatesService {
     return this.detail(modelId);
   }
 
-  async samples(modelId: number): Promise<TemplateSampleList> {
-    const notes = await this.anki.getNotesForModel(modelId, SAMPLE_LIMIT);
+  /** Notes of a type matching a search term, for the preview picker. An empty
+   *  term returns nothing — the default sample (below) drives the initial card. */
+  async samples(modelId: number, search?: string): Promise<TemplateSampleList> {
+    await this.nameForId(modelId); // 404 for unknown ids
+    if (!search?.trim()) return { samples: [] };
+    const notes = await this.anki.getNotesForModel(
+      modelId,
+      SAMPLE_LIMIT,
+      search,
+    );
     return { samples: notes };
+  }
+
+  /** Resolve the single default preview sample: the saved `sampleNoteId` if it
+   *  still exists for this type, else the first note, else null (no notes). */
+  async defaultSample(modelId: number): Promise<TemplateDefaultSample> {
+    await this.nameForId(modelId); // 404 for unknown ids
+    const store = await this.readStore();
+    const savedId = store[String(modelId)]?.sampleNoteId ?? null;
+
+    if (savedId != null) {
+      const saved = await this.anki.getNoteForModel(modelId, savedId);
+      if (saved) return { sample: saved };
+    }
+
+    const [first] = await this.anki.getNotesForModel(modelId, 1);
+    return { sample: first ?? null };
   }
 }
 

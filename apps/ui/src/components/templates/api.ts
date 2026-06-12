@@ -1,6 +1,7 @@
 import type {
   CreateTemplate,
   FieldOp,
+  TemplateDefaultSample,
   TemplateDetail,
   TemplateSampleList,
   TemplateSummaryList,
@@ -25,8 +26,10 @@ async function json<T>(r: Response): Promise<T> {
 
 export const templatesKey = ['templates'] as const;
 export const templateKey = (modelId: number) => ['templates', modelId] as const;
-export const samplesKey = (modelId: number) =>
-  ['templates', modelId, 'samples'] as const;
+export const defaultSampleKey = (modelId: number) =>
+  ['templates', modelId, 'default-sample'] as const;
+export const sampleSearchKey = (modelId: number, search: string) =>
+  ['templates', modelId, 'sample-search', search] as const;
 
 export async function fetchTemplates(): Promise<TemplateSummaryList> {
   return json(await fetch('/api/templates'));
@@ -36,10 +39,20 @@ export async function fetchTemplate(modelId: number): Promise<TemplateDetail> {
   return json(await fetch(`/api/templates/${modelId}`));
 }
 
-export async function fetchSamples(
+/** The single default preview sample (saved pick → first note → null). */
+export async function fetchDefaultSample(
   modelId: number
+): Promise<TemplateDefaultSample> {
+  return json(await fetch(`/api/templates/${modelId}/sample`));
+}
+
+/** Notes of this type matching `search`, for the preview picker. */
+export async function searchSamples(
+  modelId: number,
+  search: string
 ): Promise<TemplateSampleList> {
-  return json(await fetch(`/api/templates/${modelId}/samples`));
+  const params = `?search=${encodeURIComponent(search)}`;
+  return json(await fetch(`/api/templates/${modelId}/samples${params}`));
 }
 
 export async function createTemplate(

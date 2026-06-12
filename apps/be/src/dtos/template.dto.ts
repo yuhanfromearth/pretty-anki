@@ -1,5 +1,6 @@
 import {
   CreateTemplateSchema,
+  TemplateDefaultSampleSchema,
   TemplateDetailSchema,
   TemplateSampleListSchema,
   TemplateSummaryListSchema,
@@ -17,4 +18,7 @@ export class TemplateSummaryListDto extends createZodDto(
 export class TemplateDetailDto extends createZodDto(TemplateDetailSchema) {}
 export class TemplateSampleListDto extends createZodDto(
   TemplateSampleListSchema,
+) {}
+export class TemplateDefaultSampleDto extends createZodDto(
+  TemplateDefaultSampleSchema,
 ) {}

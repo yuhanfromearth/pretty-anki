@@ -433,14 +433,20 @@ export class AnkiConnectService {
     return ids.length;
   }
 
-  /** A bounded set of real notes of a type, for the builder preview sampler. */
+  /** A bounded set of real notes of a type, for the builder preview sampler.
+   *  An optional `search` term narrows to notes whose fields contain it (Anki
+   *  `*term*`), matching the manage-page note search. */
   async getNotesForModel(
     modelId: number,
     limit: number,
+    search?: string,
   ): Promise<{ noteId: number; fields: NoteFields }[]> {
-    const ids = await this.invoke<number[]>('findNotes', {
-      query: `mid:${modelId}`,
-    });
+    let query = `mid:${modelId}`;
+    const term = search?.trim();
+    if (term) {
+      query += ` "*${this.escapeQuery(term)}*"`;
+    }
+    const ids = await this.invoke<number[]>('findNotes', { query });
     if (ids.length === 0) return [];
     const infos = await this.invoke<AnkiNoteInfo[]>('notesInfo', {
       notes: ids.slice(0, limit),
@@ -449,6 +455,27 @@ export class AnkiConnectService {
       const note = this.toNote(info);
       return { noteId: note.noteId, fields: note.fields };
     });
+  }
+
+  /** Fetch a single note's fields by id, but only if it's still of the expected
+   *  note type — used to resolve the builder's saved preview sample, which may
+   *  have since been deleted or had its type changed. Returns null otherwise. */
+  async getNoteForModel(
+    modelId: number,
+    noteId: number,
+  ): Promise<{ noteId: number; fields: NoteFields } | null> {
+    const infos = await this.invoke<AnkiNoteInfo[]>('notesInfo', {
+      notes: [noteId],
+    });
+    const info = infos[0];
+    // notesInfo returns [] (or an entry without fields) for a missing note.
+    if (!info || !info.fields) return null;
+    const ids = await this.invoke<number[]>('findNotes', {
+      query: `mid:${modelId} nid:${noteId}`,
+    });
+    if (ids.length === 0) return null;
+    const note = this.toNote(info);
+    return { noteId: note.noteId, fields: note.fields };
   }
 
   async addNote(
