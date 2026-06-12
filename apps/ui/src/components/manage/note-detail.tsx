@@ -286,7 +286,11 @@ export function NoteEditPanel({
             onInit={handleFieldInit}
           />
         ) : (
-          <CardPreview fieldNames={fieldNames} values={values} />
+          <CardPreview
+            modelName={note.modelName}
+            fieldNames={fieldNames}
+            values={values}
+          />
         )}
       </div>
 
@@ -436,7 +440,11 @@ export function AddNotePanel({
             autoFocusFirst
           />
         ) : (
-          <CardPreview fieldNames={model.fields} values={values} />
+          <CardPreview
+            modelName={model.name}
+            fieldNames={model.fields}
+            values={values}
+          />
         )}
       </div>
 

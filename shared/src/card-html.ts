@@ -24,6 +24,10 @@ export function stripHtml(html: string): string {
       .replace(/\[anki:play:[^\]]+]/g, '')
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/div>\s*<div[^>]*>/gi, '\n')
+      // Rich-text editors (and Anki) separate lines with paragraphs rather than
+      // <br>; treat every paragraph break as a newline so multi-line fields
+      // don't collapse onto one line.
+      .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
       .replace(/<[^>]*>/g, '')
       .replace(/\u00a0/g, ' ')
       .split('\n')
