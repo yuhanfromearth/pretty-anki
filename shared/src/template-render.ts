@@ -13,11 +13,11 @@ import { sanitizeHtml } from './sanitize-html.js';
  *  fallbacks. `audio` and `image` are interactive/media and rendered as
  *  components by the UI, so they are intentionally absent here. */
 export const ROLE_STYLES: Record<Exclude<Role, 'audio' | 'image'>, string> = {
-  heading: 'font-display text-3xl font-medium tracking-tight',
-  subheading: 'font-display text-xl',
-  annotation: 'font-mono text-sm text-muted-foreground',
-  body: 'font-sans text-base leading-relaxed',
-  example: 'font-sans italic text-muted-foreground',
+  heading: 'font-display text-5xl font-medium tracking-tight',
+  subheading: 'font-display text-2xl',
+  annotation: 'font-mono text-base text-muted-foreground',
+  body: 'font-sans text-xl leading-relaxed',
+  example: 'font-sans text-lg italic text-muted-foreground',
 };
 
 /** Roles whose HTML is produced here. `audio`/`image` are component-rendered. */
