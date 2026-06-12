@@ -93,8 +93,14 @@ export async function saveLayout(
   );
 }
 
-export async function resetLayout(modelId: number): Promise<TemplateDetail> {
+/** Un-author one direction (ord), reverting it to its Anki-seeded layout. */
+export async function resetLayout(
+  modelId: number,
+  ord: number
+): Promise<TemplateDetail> {
   return json(
-    await fetch(`/api/templates/${modelId}/reset`, { method: 'POST' })
+    await fetch(`/api/templates/${modelId}/reset?ord=${ord}`, {
+      method: 'POST',
+    })
   );
 }

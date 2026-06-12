@@ -53,7 +53,9 @@ export function CardPreview({
     enabled: useTemplate,
     retry: false,
   });
-  const layout = detailQuery.data?.layout;
+  // Preview the primary direction (ord 0); the manage card mirrors the forward
+  // card a note shows first.
+  const layout = detailQuery.data?.cards[0]?.layout;
   const css = detailQuery.data?.css;
 
   // Fallback inputs, computed unconditionally to keep hook order stable.

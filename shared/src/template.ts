@@ -40,19 +40,40 @@ export const LayoutSchema = z.object({
 export type Layout = z.infer<typeof LayoutSchema>;
 
 /** The app-native document for one note type. The field list itself lives in
- *  Anki; this captures only what Anki can't: layout, optional custom CSS, and
- *  the preview sample selection. Keyed in the store by stable `modelId` so an
- *  Anki rename doesn't orphan it. `name` is cached for display and refreshed on
- *  reconcile. */
-export const TemplateDocSchema = z.object({
-  modelId: z.number(),
-  name: z.string(),
-  layout: LayoutSchema,
-  /** Custom CSS applied to the whole card (sanitised). */
-  css: z.string().optional(),
-  /** Note used to populate the live preview; null falls back to placeholders. */
-  sampleNoteId: z.number().nullable(),
-});
+ *  Anki; this captures only what Anki can't: per-direction layouts, optional
+ *  custom CSS, and the preview sample selection. Keyed in the store by stable
+ *  `modelId` so an Anki rename doesn't orphan it. `name` is cached for display
+ *  and refreshed on reconcile. */
+export const TemplateDocSchema = z.preprocess(
+  (val) => {
+    // Migrate the legacy single-layout doc ({ layout }) to per-ord cards by
+    // mapping the old layout onto ord 0 — Anki's first card template, the only
+    // one the single-card builder ever wrote.
+    if (
+      val &&
+      typeof val === 'object' &&
+      !('cards' in val) &&
+      'layout' in val
+    ) {
+      const { layout, ...rest } = val as Record<string, unknown>;
+      return { ...rest, cards: { '0': layout } };
+    }
+    return val;
+  },
+  z.object({
+    modelId: z.number(),
+    name: z.string(),
+    /** Per-card-template layouts keyed by ord (stringified). Sparse: only ords
+     *  authored in the builder appear; unauthored ords are seeded from Anki's
+     *  existing card template at read time and never published until edited. */
+    cards: z.record(z.string(), LayoutSchema),
+    /** Custom CSS applied to every card of the type (sanitised) — Anki shares
+     *  one stylesheet across all card templates, so this is note-type-level. */
+    css: z.string().optional(),
+    /** Note used to populate the live preview; null falls back to placeholders. */
+    sampleNoteId: z.number().nullable(),
+  })
+);
 export type TemplateDoc = z.infer<typeof TemplateDocSchema>;
 
 /** On-disk shape of `~/.pretty-anki/templates.json`: modelId (stringified) → doc. */
@@ -79,13 +100,28 @@ export const TemplateSummaryListSchema = z.object({
 });
 export type TemplateSummaryList = z.infer<typeof TemplateSummaryListSchema>;
 
-/** Full Template detail for the builder: live fields + the (possibly seeded) doc. */
+/** One card template (direction) surfaced to the builder: its ord + live Anki
+ *  template name, the layout to edit, and whether it's been authored in the app
+ *  yet. `layout` is the stored authored layout when `authored`, else one seeded
+ *  from the card template's existing Anki HTML (field placement recovered,
+ *  styled via roles). */
+export const CardTemplateLayoutSchema = z.object({
+  ord: z.number().int().min(0),
+  name: z.string(),
+  layout: LayoutSchema,
+  authored: z.boolean(),
+});
+export type CardTemplateLayout = z.infer<typeof CardTemplateLayoutSchema>;
+
+/** Full Template detail for the builder: live fields + one entry per card
+ *  template (direction), each with its authored-or-seeded layout. */
 export const TemplateDetailSchema = z.object({
   modelId: z.number(),
   name: z.string(),
   fields: z.array(z.string()),
   isCloze: z.boolean(),
-  layout: LayoutSchema,
+  /** One per Anki card template, in ord order. */
+  cards: z.array(CardTemplateLayoutSchema),
   css: z.string().optional(),
   sampleNoteId: z.number().nullable(),
   /** Live count of notes of this type — drives the destructive-remove warning. */
@@ -145,8 +181,11 @@ export const FieldOpSchema = z.discriminatedUnion('op', [
 ]);
 export type FieldOp = z.infer<typeof FieldOpSchema>;
 
-/** Persist the layout/css/sample after edits in the builder. */
+/** Persist one direction's layout (by `ord`) plus the shared css/sample after
+ *  edits in the builder. Saving authors that ord, so it begins publishing to
+ *  Anki's matching card template. */
 export const UpdateLayoutSchema = z.object({
+  ord: z.number().int().min(0),
   layout: LayoutSchema,
   css: z.string().optional(),
   sampleNoteId: z.number().nullable(),

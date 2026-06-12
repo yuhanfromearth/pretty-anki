@@ -291,9 +291,6 @@ function ScaffoldFaces({
               <Volume2 className="size-4" />
             </button>
           )}
-          <span className="mt-8 text-[10.5px] font-medium uppercase tracking-[0.14em] text-ink-300">
-            tap to reveal
-          </span>
         </div>
       </div>
 

@@ -248,10 +248,15 @@ export class AnkiConnectService {
       } | null>('guiCurrentCard');
       if (!card) return null;
 
-      // guiCurrentCard doesn't include the note id, so resolve it from the card.
-      const [noteId] = await this.invoke<number[]>('cardsToNotes', {
-        cards: [card.cardId],
-      });
+      // guiCurrentCard includes neither the note id nor the card-template index,
+      // so resolve both from cardsInfo. `ord` lets the review screen pick the
+      // direction for reversed note types (ord 0 forward, ord 1 reverse).
+      const [info] = await this.invoke<{ note: number; ord: number }[]>(
+        'cardsInfo',
+        { cards: [card.cardId] },
+      );
+      const noteId = info?.note ?? 0;
+      const ord = info?.ord ?? 0;
 
       const fieldEntries = Object.entries(card.fields);
       const allAudio = fieldEntries.flatMap(([, f]) => extractAudio(f.value));
@@ -283,6 +288,7 @@ export class AnkiConnectService {
       return {
         cardId: card.cardId,
         noteId,
+        ord,
         modelName: card.modelName,
         question,
         answer,
@@ -385,14 +391,25 @@ export class AnkiConnectService {
     );
   }
 
-  /** Card-template names of a note type, in Anki's order. The builder is
-   *  single-card, so callers overwrite the first one. */
+  /** Card-template names of a note type, in Anki's order — index = card ord. */
   async getModelTemplateNames(modelName: string): Promise<string[]> {
     const templates = await this.invoke<Record<string, unknown>>(
       'modelTemplates',
       { modelName },
     );
     return Object.keys(templates);
+  }
+
+  /** Every card template's Front/Back HTML, keyed by name in ord order — lets
+   *  the app seed an unauthored direction's layout from the field references in
+   *  its existing Anki template. */
+  async getModelTemplates(
+    modelName: string,
+  ): Promise<Record<string, { Front: string; Back: string }>> {
+    return this.invoke<Record<string, { Front: string; Back: string }>>(
+      'modelTemplates',
+      { modelName },
+    );
   }
 
   /** Overwrite a note type's card templates (Front/Back HTML), keyed by template

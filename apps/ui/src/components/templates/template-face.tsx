@@ -15,14 +15,11 @@ export function TemplateFace({
   fields,
   side,
   backface = false,
-  showHint = true,
 }: {
   blocks: Block[];
   fields: NoteFields;
   side: 'front' | 'back';
   backface?: boolean;
-  /** The "tap to reveal" hint under the front. Suppressed in static previews. */
-  showHint?: boolean;
 }) {
   const gradient =
     side === 'front'
@@ -45,11 +42,6 @@ export function TemplateFace({
           </span>
         ) : (
           blocks.map((b) => <BlockView key={b.id} block={b} fields={fields} />)
-        )}
-        {side === 'front' && showHint && blocks.length > 0 && (
-          <span className="mt-4 text-[10.5px] font-medium uppercase tracking-[0.14em] text-ink-300">
-            tap to reveal
-          </span>
         )}
       </div>
     </div>

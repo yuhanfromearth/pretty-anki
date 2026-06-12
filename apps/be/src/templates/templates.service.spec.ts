@@ -35,6 +35,9 @@ function fakeAnki(over: Partial<AnkiConnectService> = {}): AnkiConnectService {
     createModel: vi.fn(async () => 99),
     getNotesForModel: vi.fn(async () => []),
     getModelTemplateNames: vi.fn(async () => ['Card 1']),
+    getModelTemplates: vi.fn(async () => ({
+      'Card 1': { Front: '{{Front}}', Back: '{{FrontSide}}<hr>{{Back}}' },
+    })),
     updateModelTemplates: vi.fn(async () => undefined),
     updateModelStyling: vi.fn(async () => undefined),
     ...over,
@@ -45,9 +48,11 @@ const docWith = (front: string, back: string): TemplateStore => ({
   '42': {
     modelId: 42,
     name: 'Basic',
-    layout: {
-      front: [{ id: 'f', field: front, role: 'heading' }],
-      back: [{ id: 'b', field: back, role: 'body' }],
+    cards: {
+      '0': {
+        front: [{ id: 'f', field: front, role: 'heading' }],
+        back: [{ id: 'b', field: back, role: 'body' }],
+      },
     },
     sampleNoteId: null,
   },
@@ -74,7 +79,7 @@ describe('TemplatesService.applyFieldOp', () => {
       'Front',
       'Word',
     );
-    expect(detail.layout.front[0].field).toBe('Word');
+    expect(detail.cards[0].layout.front[0].field).toBe('Word');
     // The renamed layout is compiled and pushed back into the Anki note type.
     expect(anki.updateModelTemplates).toHaveBeenCalledWith('Basic', {
       'Card 1': {
@@ -107,7 +112,7 @@ describe('TemplatesService.applyFieldOp', () => {
     });
 
     expect(anki.removeModelField).toHaveBeenCalledWith('Basic', 'Back');
-    expect(detail.layout.back).toHaveLength(0);
+    expect(detail.cards[0].layout.back).toHaveLength(0);
   });
 
   it('refuses to remove the last field', async () => {
@@ -125,16 +130,18 @@ describe('TemplatesService.applyFieldOp', () => {
 });
 
 describe('TemplatesService.resetLayout', () => {
-  it('drops the stored doc and falls back to a seeded layout', async () => {
+  it('un-authors the ord and falls back to the Anki-seeded layout', async () => {
     seedStore(docWith('Front', 'Back'));
     const svc = new TemplatesService(fakeAnki());
 
-    const detail = await svc.resetLayout(42);
+    const detail = await svc.resetLayout(42, 0);
 
-    // Seeded from live fields ['Front','Back'], not the custom stored layout.
-    expect(detail.layout.front).toEqual([
+    // Seeded from the card template's Anki HTML ({{Front}} / {{Back}}), not the
+    // custom stored layout that was just dropped.
+    expect(detail.cards[0].layout.front).toEqual([
       { id: 'heading:Front', field: 'Front', role: 'heading' },
     ]);
+    expect(detail.cards[0].authored).toBe(false);
     expect(JSON.parse(state.file!)['42']).toBeUndefined();
   });
 });
@@ -218,7 +225,7 @@ describe('TemplatesService.list', () => {
       '7': {
         modelId: 7,
         name: 'Gone',
-        layout: { front: [], back: [] },
+        cards: {},
         sampleNoteId: null,
       },
     });

@@ -83,11 +83,15 @@ export class TemplatesController {
   }
 
   @Post(':modelId/reset')
-  @ApiOperation({ summary: 'Clear the app-native layout (revert to fallback)' })
+  @ApiOperation({ summary: 'Un-author one direction (revert it to the seed)' })
   @ApiParam({ name: 'modelId', description: 'Anki note type id' })
+  @ApiQuery({ name: 'ord', description: 'Card-template index to reset' })
   @ApiOkResponse({ type: TemplateDetailDto })
-  reset(@Param('modelId', ParseIntPipe) modelId: number) {
-    return this.templates.resetLayout(modelId);
+  reset(
+    @Param('modelId', ParseIntPipe) modelId: number,
+    @Query('ord', ParseIntPipe) ord: number,
+  ) {
+    return this.templates.resetLayout(modelId, ord);
   }
 
   @Get(':modelId/sample')

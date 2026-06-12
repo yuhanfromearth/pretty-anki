@@ -4,6 +4,11 @@ import { NoteFieldsSchema } from './note.js';
 export const ReviewCardSchema = z.object({
   cardId: z.number(),
   noteId: z.number(),
+  // Card-template index within the note. A single note can spawn several cards
+  // (a "reversed" note type pairs ord 0 forward with ord 1 reverse); the review
+  // screen swaps the front/back layout stacks for the reverse direction so the
+  // app-native Template renders the right side as the question.
+  ord: z.number().int().min(0),
   // Note type, so the review screen can resolve the app-native Template layout
   // and render it exactly as the builder/manage previews do.
   modelName: z.string(),

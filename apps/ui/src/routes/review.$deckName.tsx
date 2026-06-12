@@ -106,12 +106,17 @@ function ReviewPage() {
     enabled: useTemplate,
     retry: false,
   });
+  // Each card template (direction) has its own layout, so render the one for
+  // this card's ord — that's how a reversed note type shows different fields
+  // forward vs. reverse. Falls back to the first card if the ord is unknown.
+  const cards = detailQuery.data?.cards;
+  const cardLayout = cards?.find((c) => c.ord === card?.ord) ?? cards?.[0];
   const template: ReviewCardTemplate | null =
-    useTemplate && detailQuery.data
+    useTemplate && cardLayout
       ? {
-          front: detailQuery.data.layout.front,
-          back: detailQuery.data.layout.back,
-          css: detailQuery.data.css,
+          front: cardLayout.layout.front,
+          back: cardLayout.layout.back,
+          css: detailQuery.data?.css,
         }
       : null;
 

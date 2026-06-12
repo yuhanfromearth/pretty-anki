@@ -92,3 +92,60 @@ export function seedLayout(fieldNames: string[]): Layout {
     back: rest.map((f) => block(f, roleFor(f))),
   };
 }
+
+/** The note-type fields a card-template side references, in first-appearance
+ *  order. Scans Mustache tags, stripping section markers (`#`/`^`/`/`) and
+ *  field modifiers (`text:`, `hint:`, `furigana:`, …) down to the bare name,
+ *  then keeps only real fields — so `{{FrontSide}}`, `{{Tags}}`, `{{Type}}` and
+ *  the like fall away by not being in the field list. */
+function referencedFields(html: string, fieldNames: string[]): string[] {
+  const known = new Set(fieldNames);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const re = /\{\{([^}]+)\}\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    let token = m[1]
+      .trim()
+      .replace(/^[#^/]/, '')
+      .trim();
+    const colon = token.lastIndexOf(':');
+    if (colon !== -1) token = token.slice(colon + 1).trim();
+    if (known.has(token) && !seen.has(token)) {
+      seen.add(token);
+      out.push(token);
+    }
+  }
+  return out;
+}
+
+/** Seed a layout from a real Anki card template's Front/Back HTML by recovering
+ *  which fields each side references — used to fill an unauthored direction from
+ *  what the user configured in Anki (e.g. a "reversed" card's own front/back).
+ *  Only field *placement* is imported; styling comes from the app's roles.
+ *  `roleHints` reuses the role a field already carries in an authored direction
+ *  so a field looks the same across directions; otherwise the first front field
+ *  becomes the `heading` and the rest fall back by name (audio/image/body). */
+export function extractLayoutFromCardTemplate(
+  frontHtml: string,
+  backHtml: string,
+  fieldNames: string[],
+  roleHints: Record<string, Role> = {}
+): Layout {
+  const autoRole = (field: string): Role => {
+    if (/audio|sound/i.test(field)) return 'audio';
+    if (/image|picture|photo|pic\b/i.test(field)) return 'image';
+    return 'body';
+  };
+  const toBlocks = (names: string[], isFront: boolean): Block[] =>
+    names.map((field, i) => {
+      const role =
+        roleHints[field] ?? (isFront && i === 0 ? 'heading' : autoRole(field));
+      return { id: `${role}:${field}`, field, role };
+    });
+
+  return {
+    front: toBlocks(referencedFields(frontHtml, fieldNames), true),
+    back: toBlocks(referencedFields(backHtml, fieldNames), false),
+  };
+}

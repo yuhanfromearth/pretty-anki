@@ -10,10 +10,12 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import {
   TemplateStoreSchema,
   compileLayoutToAnki,
+  extractLayoutFromCardTemplate,
   seedLayout,
   type CreateTemplate,
   type FieldOp,
   type Layout,
+  type Role,
   type TemplateDefaultSample,
   type TemplateDetail,
   type TemplateDoc,
@@ -53,32 +55,39 @@ export class TemplatesService {
     await writeFile(STORE_FILE, JSON.stringify(store, null, 2), 'utf-8');
   }
 
-  /** Compile the app-native layout into the note type's Anki card template + CSS
-   *  and write it back into the collection, so the design persists in Anki and
-   *  exports with the deck. Called on every layout-affecting save. Skips Cloze
-   *  types (they stay on Anki's own cloze templates) and layouts with an empty
-   *  front (Anki rejects a blank question). Overwrites the note type's first
-   *  card template and its shared CSS — intended: saving in the builder *is* the
-   *  user applying their design to the note type. */
+  /** Compile each authored direction's layout into its matching Anki card
+   *  template (joined by ord → name) and write them back into the collection,
+   *  plus the shared model CSS, so the design persists in Anki and exports with
+   *  the deck. Only ords the user has authored are published — unauthored card
+   *  templates (e.g. a reversed card not yet edited here) are left untouched.
+   *  Skips Cloze types and any direction with an empty front (Anki rejects a
+   *  blank question). */
   private async publishToAnki(
     modelName: string,
-    layout: Layout,
-    css: string | undefined,
+    doc: TemplateDoc,
   ): Promise<void> {
-    if (layout.front.length === 0) return;
     if (await this.anki.isClozeModel(modelName)) return;
 
-    const [existing] = await this.anki.getModelTemplateNames(modelName);
-    const { css: compiledCss, cardTemplates } = compileLayoutToAnki(
-      layout,
-      css,
-      existing ?? 'Card 1',
-    );
-    const [card] = cardTemplates;
-    await this.anki.updateModelTemplates(modelName, {
-      [card.Name]: { Front: card.Front, Back: card.Back },
-    });
-    await this.anki.updateModelStyling(modelName, compiledCss);
+    const names = await this.anki.getModelTemplateNames(modelName); // ord → name
+    const templates: Record<string, { Front: string; Back: string }> = {};
+    let css: string | undefined;
+
+    for (const [ordStr, layout] of Object.entries(doc.cards)) {
+      if (layout.front.length === 0) continue; // Anki rejects a blank question
+      const name = names[Number(ordStr)];
+      if (!name) continue; // ord no longer exists in Anki
+      const compiled = compileLayoutToAnki(layout, doc.css, name);
+      const [card] = compiled.cardTemplates;
+      templates[name] = { Front: card.Front, Back: card.Back };
+      css = compiled.css; // identical across ords (role CSS + custom)
+    }
+
+    if (Object.keys(templates).length > 0) {
+      await this.anki.updateModelTemplates(modelName, templates);
+    }
+    if (css !== undefined) {
+      await this.anki.updateModelStyling(modelName, css);
+    }
   }
 
   /** List every note type as a Template, flagging which have a saved layout,
@@ -121,20 +130,34 @@ export class TemplatesService {
    *  freshly seeded) layout. */
   async detail(modelId: number): Promise<TemplateDetail> {
     const name = await this.nameForId(modelId);
-    const [fields, isCloze, noteCount, store] = await Promise.all([
+    const [fields, isCloze, noteCount, store, templates] = await Promise.all([
       this.anki.getModelFields(name),
       this.anki.isClozeModel(name),
       this.anki.countNotesForModel(modelId),
       this.readStore(),
+      this.anki.getModelTemplates(name),
     ]);
 
+    // One entry per Anki card template, in ord order (object key order). Each
+    // direction uses its stored authored layout, or one seeded from the card
+    // template's existing Anki HTML so an un-edited reversed card still shows
+    // the right fields.
     const doc = store[String(modelId)];
+    const roleHints = collectRoleHints(doc);
+    const cards = Object.entries(templates).map(([tname, tpl], ord) => {
+      const stored = doc?.cards[String(ord)];
+      const layout =
+        stored ??
+        extractLayoutFromCardTemplate(tpl.Front, tpl.Back, fields, roleHints);
+      return { ord, name: tname, layout, authored: stored !== undefined };
+    });
+
     return {
       modelId,
       name,
       fields,
       isCloze,
-      layout: doc?.layout ?? seedLayout(fields),
+      cards,
       css: doc?.css,
       sampleNoteId: doc?.sampleNoteId ?? null,
       noteCount,
@@ -152,32 +175,22 @@ export class TemplatesService {
     const doc: TemplateDoc = {
       modelId,
       name: input.name,
-      layout: seedLayout(input.fields),
+      // createModel makes a single card template (ord 0); seed its layout.
+      cards: { '0': seedLayout(input.fields) },
       sampleNoteId: null,
     };
     const store = await this.readStore();
     store[String(modelId)] = doc;
     await this.writeStore(store);
-    await this.publishToAnki(input.name, doc.layout, undefined);
+    await this.publishToAnki(input.name, doc);
     return this.detail(modelId);
   }
 
-  /** Ensure a stored doc exists for a model, seeding from current fields if not,
-   *  so layout edits made alongside field edits have somewhere to persist. */
-  private async materialize(
-    modelId: number,
-    name: string,
-    fields: string[],
-    store: TemplateStore,
-  ): Promise<TemplateDoc> {
-    const existing = store[String(modelId)];
-    if (existing) return existing;
-    return { modelId, name, layout: seedLayout(fields), sampleNoteId: null };
-  }
-
-  /** Apply a field mutation to the Anki note type, then keep the layout
-   *  consistent: rename rewrites `block.field` references atomically; remove
-   *  cascades to drop orphaned blocks. */
+  /** Apply a field mutation to the Anki note type, then keep authored layouts
+   *  consistent: rename rewrites `block.field` references across every stored
+   *  direction; remove cascades to drop orphaned blocks. Unauthored types have
+   *  no stored doc — their layouts re-seed from Anki on the next read, so
+   *  there's nothing to rewrite (and we don't fabricate authored layouts). */
   async applyFieldOp(modelId: number, op: FieldOp): Promise<TemplateDetail> {
     const name = await this.nameForId(modelId);
 
@@ -190,31 +203,37 @@ export class TemplatesService {
       }
     }
 
-    const store = await this.readStore();
-    const fieldsBefore = await this.anki.getModelFields(name);
-    const doc = await this.materialize(modelId, name, fieldsBefore, store);
-    let layout: Layout = doc.layout;
-
     switch (op.op) {
       case 'add':
         await this.anki.addModelField(name, op.name);
         break;
       case 'rename':
         await this.anki.renameModelField(name, op.from, op.to);
-        layout = remapField(layout, op.from, op.to);
         break;
       case 'remove':
         await this.anki.removeModelField(name, op.name);
-        layout = dropField(layout, op.name);
         break;
       case 'reposition':
         await this.anki.repositionModelField(name, op.name, op.index);
         break;
     }
 
-    store[String(modelId)] = { ...doc, name, layout };
-    await this.writeStore(store);
-    await this.publishToAnki(name, layout, doc.css);
+    const store = await this.readStore();
+    const doc = store[String(modelId)];
+    if (doc && (op.op === 'rename' || op.op === 'remove')) {
+      const map: (l: Layout) => Layout =
+        op.op === 'rename'
+          ? (l) => remapField(l, op.from, op.to)
+          : (l) => dropField(l, op.name);
+      doc.cards = Object.fromEntries(
+        Object.entries(doc.cards).map(([ord, l]) => [ord, map(l)]),
+      );
+      doc.name = name;
+      store[String(modelId)] = doc;
+      await this.writeStore(store);
+      await this.publishToAnki(name, doc);
+    }
+
     return this.detail(modelId);
   }
 
@@ -227,24 +246,36 @@ export class TemplatesService {
   ): Promise<TemplateDetail> {
     const name = await this.nameForId(modelId);
     const store = await this.readStore();
-    store[String(modelId)] = {
+    const existing = store[String(modelId)];
+    // Author the given ord; css/sample are note-type-level (shared).
+    const doc: TemplateDoc = {
       modelId,
       name,
-      layout: input.layout,
+      cards: { ...existing?.cards, [String(input.ord)]: input.layout },
       css: input.css,
       sampleNoteId: input.sampleNoteId,
     };
+    store[String(modelId)] = doc;
     await this.writeStore(store);
-    await this.publishToAnki(name, input.layout, input.css);
+    await this.publishToAnki(name, doc);
     return this.detail(modelId);
   }
 
-  /** Drop the app-native layout, reverting the type to fallback rendering.
-   *  The Anki note type itself is untouched (AnkiConnect can't delete it). */
-  async resetLayout(modelId: number): Promise<TemplateDetail> {
+  /** Un-author a single direction: drop its stored layout so it reverts to the
+   *  Anki-seeded layout and the app stops publishing it. When no authored
+   *  directions remain, the doc is removed entirely (the type reverts to
+   *  fallback rendering). Like the previous reset, this doesn't rewrite Anki —
+   *  the card template keeps whatever was last published. */
+  async resetLayout(modelId: number, ord: number): Promise<TemplateDetail> {
     const store = await this.readStore();
-    delete store[String(modelId)];
-    await this.writeStore(store);
+    const doc = store[String(modelId)];
+    if (doc) {
+      delete doc.cards[String(ord)];
+      if (Object.keys(doc.cards).length === 0) {
+        delete store[String(modelId)];
+      }
+      await this.writeStore(store);
+    }
     return this.detail(modelId);
   }
 
@@ -276,6 +307,19 @@ export class TemplatesService {
     const [first] = await this.anki.getNotesForModel(modelId, 1);
     return { sample: first ?? null };
   }
+}
+
+/** Field → role map gathered from every authored direction, so a field keeps a
+ *  consistent role when another direction is seeded from its Anki template. */
+function collectRoleHints(doc: TemplateDoc | undefined): Record<string, Role> {
+  const hints: Record<string, Role> = {};
+  if (!doc) return hints;
+  for (const layout of Object.values(doc.cards)) {
+    for (const block of [...layout.front, ...layout.back]) {
+      hints[block.field] = block.role;
+    }
+  }
+  return hints;
 }
 
 /** Rewrite every block referencing `from` to reference `to`. */

@@ -1,10 +1,53 @@
 import { describe, expect, it } from 'vitest';
 import {
+  extractLayoutFromCardTemplate,
   renderBlockHtml,
   sanitizeHtml,
   seedLayout,
   type Block,
 } from '@nts/shared';
+
+describe('extractLayoutFromCardTemplate', () => {
+  const fields = ['Korean', 'English', 'Audio', 'Example'];
+
+  it('recovers front/back field placement from a reversed card template', () => {
+    const layout = extractLayoutFromCardTemplate(
+      '{{English}}',
+      '{{FrontSide}}<hr id=answer>{{Korean}}\n{{Audio}}',
+      fields,
+    );
+    expect(layout.front.map((b) => b.field)).toEqual(['English']);
+    expect(layout.back.map((b) => b.field)).toEqual(['Korean', 'Audio']);
+    // First front field becomes the heading; audio detected by name.
+    expect(layout.front[0].role).toBe('heading');
+    expect(layout.back[1].role).toBe('audio');
+  });
+
+  it('ignores non-field tokens, modifiers, and section markers', () => {
+    const layout = extractLayoutFromCardTemplate(
+      '{{#Korean}}{{text:Korean}}{{/Korean}}{{Tags}}{{FrontSide}}',
+      '{{hint:Example}}',
+      fields,
+    );
+    // Korean appears once despite the conditional + modifier; Tags/FrontSide drop.
+    expect(layout.front.map((b) => b.field)).toEqual(['Korean']);
+    expect(layout.back.map((b) => b.field)).toEqual(['Example']);
+  });
+
+  it('reuses role hints so a field looks the same across directions', () => {
+    const layout = extractLayoutFromCardTemplate(
+      '{{English}}',
+      '{{Korean}}',
+      fields,
+      {
+        English: 'subheading',
+        Korean: 'heading',
+      },
+    );
+    expect(layout.front[0].role).toBe('subheading');
+    expect(layout.back[0].role).toBe('heading');
+  });
+});
 
 describe('seedLayout', () => {
   it('puts the first field on the front as a heading', () => {
