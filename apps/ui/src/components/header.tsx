@@ -1,6 +1,6 @@
 import { Link, useMatches } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Sun, Moon, Settings } from 'lucide-react';
+import { Sun, Moon, Settings, LayoutTemplate } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Streak } from '@nts/shared';
@@ -189,6 +189,14 @@ export function Header() {
               </PopoverContent>
             </Popover>
           )}
+          <Link
+            to="/templates"
+            title="Templates"
+            aria-label="Templates"
+            className="flex size-8 items-center justify-center rounded-lg text-ink-300 transition-colors hover:bg-milk-100 hover:text-ink-500"
+          >
+            <LayoutTemplate className="size-4" />
+          </Link>
           <button
             onClick={toggleTheme}
             className="flex size-8 items-center justify-center rounded-lg text-ink-300 transition-colors hover:bg-milk-100 hover:text-ink-500"
