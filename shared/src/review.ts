@@ -1,8 +1,12 @@
 import { z } from 'zod';
+import { NoteFieldsSchema } from './note.js';
 
 export const ReviewCardSchema = z.object({
   cardId: z.number(),
   noteId: z.number(),
+  // Note type, so the review screen can resolve the app-native Template layout
+  // and render it exactly as the builder/manage previews do.
+  modelName: z.string(),
   question: z.string(),
   answer: z.string(),
   deckName: z.string(),
@@ -13,6 +17,9 @@ export const ReviewCardSchema = z.object({
   // back), so its list is a superset of the front's.
   questionAudio: z.array(z.string()),
   answerAudio: z.array(z.string()),
+  // Raw note fields (name → HTML), driving the app-native Template renderer when
+  // the note type has been customized in the builder. Empty for fallback types.
+  fields: NoteFieldsSchema,
 });
 
 export const AnswerCardSchema = z.object({

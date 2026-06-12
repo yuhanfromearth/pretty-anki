@@ -7,10 +7,20 @@ import type {
   ReviewPace,
   UserSettings,
 } from '@nts/shared';
-import { ReviewCard, type CardDismiss } from '#/components/review/review-card';
+import {
+  ReviewCard,
+  type CardDismiss,
+  type ReviewCardTemplate,
+} from '#/components/review/review-card';
 import { AnswerBar } from '#/components/review/answer-bar';
 import { ReviewProgress } from '#/components/review/review-progress';
 import { ReviewComplete } from '#/components/review/review-complete';
+import {
+  fetchTemplate,
+  fetchTemplates,
+  templateKey,
+  templatesKey,
+} from '#/components/templates/api';
 
 export const Route = createFileRoute('/review/$deckName')({
   component: ReviewPage,
@@ -75,6 +85,35 @@ function ReviewPage() {
     },
   });
   const cardTilt = settingsQuery.data?.cardTilt ?? true;
+
+  // Resolve the current note type to its app-native Template so the live card
+  // renders with the same roles + custom CSS as the builder/manage previews.
+  // Notes carry only modelName, so map it to a modelId via the templates list,
+  // then load the saved layout when the type has been customized. Cloze and
+  // never-customized types stay on the question/answer scaffold fallback.
+  const templatesQuery = useQuery({
+    queryKey: templatesKey,
+    queryFn: fetchTemplates,
+    retry: false,
+  });
+  const summary = templatesQuery.data?.templates.find(
+    (t) => t.name === card?.modelName
+  );
+  const useTemplate = !!summary && summary.customized && !summary.isCloze;
+  const detailQuery = useQuery({
+    queryKey: templateKey(summary?.modelId ?? -1),
+    queryFn: () => fetchTemplate(summary!.modelId),
+    enabled: useTemplate,
+    retry: false,
+  });
+  const template: ReviewCardTemplate | null =
+    useTemplate && detailQuery.data
+      ? {
+          front: detailQuery.data.layout.front,
+          back: detailQuery.data.layout.back,
+          css: detailQuery.data.css,
+        }
+      : null;
 
   const startSession = useCallback(async () => {
     try {
@@ -264,6 +303,8 @@ function ReviewPage() {
           dismiss={dismiss}
           tilt={cardTilt}
           onFlip={handleFlip}
+          fields={card.fields}
+          template={template}
         />
 
         <div className="mt-8">
