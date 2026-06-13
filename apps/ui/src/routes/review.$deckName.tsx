@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import type {
   ReviewCard as ReviewCardType,
@@ -75,6 +75,11 @@ function ReviewPage() {
   const [medianMs, setMedianMs] = useState<number | undefined>();
   const [dismiss, setDismiss] = useState<CardDismiss | null>(null);
   const dismissing = useRef(false);
+  // Refresh the header streak once per session — the first answered card may be
+  // the first review of the day, which flips the badge from frozen to active
+  // and rolls the count up. Guarded so we don't refetch on every card.
+  const streakRefreshed = useRef(false);
+  const queryClient = useQueryClient();
 
   const settingsQuery = useQuery<UserSettings>({
     queryKey: ['user-settings'],
@@ -165,6 +170,12 @@ function ReviewPage() {
     }
   }, [phase]);
 
+  const refreshStreakOnce = useCallback(() => {
+    if (streakRefreshed.current) return;
+    streakRefreshed.current = true;
+    queryClient.invalidateQueries({ queryKey: ['streak'] });
+  }, [queryClient]);
+
   const advanceCard = useCallback(async (countsAsProgress: boolean) => {
     if (countsAsProgress) setReviewed((r) => r + 1);
     try {
@@ -200,13 +211,14 @@ function ReviewPage() {
       setTimeout(async () => {
         try {
           await postJson('/api/anki/review/answer', { ease });
+          refreshStreakOnce();
           await advanceCard(countsAsProgress);
         } catch {
           await advanceCard(countsAsProgress);
         }
       }, 420);
     },
-    [card, advanceCard]
+    [card, advanceCard, refreshStreakOnce]
   );
 
   useEffect(() => {
@@ -249,12 +261,13 @@ function ReviewPage() {
           cardId: card.cardId,
           days,
         });
+        refreshStreakOnce();
         await advanceCard(true);
       } catch {
         await advanceCard(true);
       }
     },
-    [card, advanceCard]
+    [card, advanceCard, refreshStreakOnce]
   );
 
   if (phase === 'done') {

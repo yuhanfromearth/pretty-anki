@@ -121,17 +121,21 @@ export class AnkiConnectService {
 
     const countByDate = new Map(reviewed.map(([date, count]) => [date, count]));
 
-    let days = 0;
     const now = new Date();
-    for (let i = 0; i < 365; i++) {
+    const todayStr = now.toISOString().slice(0, 10);
+    const reviewedToday = (countByDate.get(todayStr) ?? 0) > 0;
+
+    // Count the run of consecutive reviewed days ending at the last reviewed
+    // day. When today hasn't been reviewed yet, start from yesterday so `days`
+    // holds the standing streak through yesterday — the frozen value the UI
+    // shows until the first review of today bumps it to `days + 1`.
+    let days = 0;
+    for (let i = reviewedToday ? 0 : 1; i < 365; i++) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().slice(0, 10);
       const count = countByDate.get(dateStr) ?? 0;
-      if (count === 0) {
-        if (i === 0) break;
-        break;
-      }
+      if (count === 0) break;
       days++;
     }
 
@@ -158,7 +162,7 @@ export class AnkiConnectService {
       history.push({ date: dateStr, count: countByDate.get(dateStr) ?? 0 });
     }
 
-    return { days, history };
+    return { days, reviewedToday, history };
   }
 
   async getReviewPace(): Promise<ReviewPace> {

@@ -7,6 +7,7 @@ export const StreakDaySchema = z.object({
 
 export const StreakSchema = z.object({
   days: z.number(),
+  reviewedToday: z.boolean(),
   history: z.array(StreakDaySchema),
 });
 

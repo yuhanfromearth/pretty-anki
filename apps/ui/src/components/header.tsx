@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Streak } from '@nts/shared';
 import { SettingsDialog } from '#/components/settings-dialog';
+import { StreakBadge } from '#/components/streak-badge';
 import { StreakHeatmap } from '#/components/streak-heatmap';
 import {
   Popover,
@@ -171,12 +172,16 @@ export function Header() {
                 openOnHover
                 delay={150}
                 closeDelay={200}
-                className="mr-2 flex items-center gap-1.5 rounded-full bg-milk-200/60 border border-milk-300/50 pl-0.5 pr-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-milk-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-300"
+                className={`mr-2 flex items-center gap-1.5 rounded-full border pl-0.5 pr-2.5 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-300 ${
+                  streak.data.reviewedToday
+                    ? 'bg-milk-200/60 border-milk-300/50 hover:bg-milk-200'
+                    : 'bg-milk-100/50 border-milk-300/30 hover:bg-milk-100'
+                }`}
               >
-                <span className="flex size-5.5 items-center justify-center rounded-full bg-milk-400/60 font-display text-[11px] font-semibold text-ink-700">
-                  {streak.data.days}
-                </span>
-                <span className="text-ink-700">day streak</span>
+                <StreakBadge
+                  days={streak.data.days}
+                  reviewedToday={streak.data.reviewedToday}
+                />
               </PopoverTrigger>
               <PopoverContent
                 backdrop

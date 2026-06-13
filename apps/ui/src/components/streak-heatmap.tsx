@@ -46,8 +46,15 @@ export function StreakHeatmap({ streak }: { streak: Streak }) {
   const reducedMotion = useReducedMotion();
   const [hovered, setHovered] = useState<StreakDay | null>(null);
 
-  const { days, history } = streak;
+  const { days, reviewedToday, history } = streak;
   const todayStr = history.length > 0 ? history[history.length - 1].date : '';
+
+  const headline =
+    days === 0
+      ? `${days} day streak :(`
+      : reviewedToday
+        ? `🌸 ${days} day streak`
+        : `🌸 ${days} day streak · review to keep it`;
 
   // history is dense and Monday-aligned from the backend, so chunking by 7
   // yields columns of Mon..Sun. Only the last column may be partial (future
@@ -60,8 +67,12 @@ export function StreakHeatmap({ streak }: { streak: Streak }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-0.5">
-        <span className="font-display text-base font-semibold text-ink-900">
-          {days === 0 ? `${days} day streak :(` : `🌸 ${days} day streak`}
+        <span
+          className={`font-display text-base font-semibold ${
+            reviewedToday ? 'text-ink-900' : 'text-ink-500'
+          }`}
+        >
+          {headline}
         </span>
         <span className="h-4 font-mono text-xs leading-4 text-ink-300">
           {hovered ? formatDay(hovered) : 'Last 6 months'}
