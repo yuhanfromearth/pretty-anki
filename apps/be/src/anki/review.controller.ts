@@ -11,6 +11,7 @@ import {
   AnswerCardDto,
   RescheduleCardDto,
   ReviewSessionDto,
+  UndoReviewDto,
 } from '../dtos/review.dto.js';
 
 @ApiTags('Review')
@@ -49,5 +50,14 @@ export class ReviewController {
   @ApiOperation({ summary: 'Reschedule a card with a custom interval' })
   reschedule(@Body() body: RescheduleCardDto) {
     return this.anki.rescheduleCard(body.cardId, body.days);
+  }
+
+  @Post('undo')
+  @ApiOperation({
+    summary: 'Undo the last review action (go back to the previous card)',
+  })
+  @ApiOkResponse({ type: ReviewCardDto })
+  undo(@Body() body: UndoReviewDto) {
+    return this.anki.undoReview(body.cardId, body.steps, body.deckName);
   }
 }

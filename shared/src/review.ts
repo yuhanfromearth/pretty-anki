@@ -40,7 +40,22 @@ export const ReviewSessionSchema = z.object({
   remaining: z.number(),
 });
 
+export const UndoReviewSchema = z.object({
+  // The card currently shown in the reviewer. The server steps Anki's undo
+  // stack back, then reloads the reviewer until the displayed card differs from
+  // this id, so it returns only once Anki surfaces the re-queued previous card.
+  cardId: z.number(),
+  // How many Anki undo steps the last action took (a plain answer is 1, a
+  // reschedule is an answer plus a setDueDate = 2).
+  steps: z.number().int().min(1).max(4),
+  // The deck under review. Undo re-queues the previous card but does not move
+  // the reviewer off the current one, so the server must reload the deck's
+  // review (guiDeckReview) to surface it.
+  deckName: z.string(),
+});
+
 export type ReviewCard = z.infer<typeof ReviewCardSchema>;
 export type AnswerCard = z.infer<typeof AnswerCardSchema>;
 export type RescheduleCard = z.infer<typeof RescheduleCardSchema>;
 export type ReviewSession = z.infer<typeof ReviewSessionSchema>;
+export type UndoReview = z.infer<typeof UndoReviewSchema>;

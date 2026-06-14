@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowLeft, Undo2 } from 'lucide-react';
 import type {
   ReviewCard as ReviewCardType,
   ReviewPace,
@@ -75,6 +76,15 @@ function ReviewPage() {
   const [medianMs, setMedianMs] = useState<number | undefined>();
   const [dismiss, setDismiss] = useState<CardDismiss | null>(null);
   const dismissing = useRef(false);
+  // Stack of answered cards, newest last, so the user can step back to re-rate a
+  // card whose ease they mis-tapped. Each entry records whether the answer
+  // counted toward the progress bar (so undo can roll it back) and how many
+  // Anki undo steps it took — a reschedule is an answer plus a setDueDate.
+  const [history, setHistory] = useState<
+    { countedAsProgress: boolean; steps: number }[]
+  >([]);
+  const [undoing, setUndoing] = useState(false);
+  const undoingRef = useRef(false);
   // Refresh the header streak once per session — the first answered card may be
   // the first review of the day, which flips the badge from frozen to active
   // and rolls the count up. Guarded so we don't refetch on every card.
@@ -136,6 +146,7 @@ function ReviewPage() {
       ]);
       setTotal(session.remaining);
       setReviewed(0);
+      setHistory([]);
       if (pace) setMedianMs(pace.medianMs);
 
       const current = await fetchJson<ReviewCardType | null>(
@@ -200,7 +211,7 @@ function ReviewPage() {
 
   const handleAnswer = useCallback(
     (ease: number, buttonIndex: number) => {
-      if (dismissing.current || !card) return;
+      if (dismissing.current || undoingRef.current || !card) return;
       dismissing.current = true;
 
       const nextReview = card.nextReviews[buttonIndex] ?? '';
@@ -211,6 +222,10 @@ function ReviewPage() {
       setTimeout(async () => {
         try {
           await postJson('/api/anki/review/answer', { ease });
+          setHistory((h) => [
+            ...h,
+            { countedAsProgress: countsAsProgress, steps: 1 },
+          ]);
           refreshStreakOnce();
           await advanceCard(countsAsProgress);
         } catch {
@@ -221,6 +236,43 @@ function ReviewPage() {
     [card, advanceCard, refreshStreakOnce]
   );
 
+  // Step back to the previous card via Anki's undo stack and reveal its answer,
+  // so a mis-tapped ease can be corrected. Roll back the progress bar by the
+  // same amount the answer advanced it.
+  const handleUndo = useCallback(async () => {
+    if (dismissing.current || undoingRef.current || !card) return;
+    if (phase !== 'question' && phase !== 'answer') return;
+    if (history.length === 0) return;
+
+    undoingRef.current = true;
+    setUndoing(true);
+    const last = history[history.length - 1];
+    const fromId = card.cardId;
+    try {
+      // The server steps Anki's undo stack and waits until the reviewer has
+      // actually navigated back, so the returned card is the previous one with
+      // its answer already revealed. If the id is unchanged, undo was a no-op
+      // (nothing to undo) — leave everything as-is.
+      const prev = await postJson<ReviewCardType | null>(
+        '/api/anki/review/undo',
+        { cardId: fromId, steps: last.steps, deckName: decoded }
+      );
+      if (!prev || prev.cardId === fromId) return;
+      setHistory((h) => h.slice(0, -1));
+      if (last.countedAsProgress) setReviewed((r) => Math.max(0, r - 1));
+      setDismiss(null);
+      setCard(prev);
+      // Return on the question side so the card can be re-read before re-rating.
+      setFlipped(false);
+      setPhase('question');
+    } catch {
+      // Undo unavailable (Anki busy / offline) — leave the current card.
+    } finally {
+      undoingRef.current = false;
+      setUndoing(false);
+    }
+  }, [card, history, phase, decoded]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (
@@ -228,6 +280,11 @@ function ReviewPage() {
         e.target instanceof HTMLTextAreaElement
       )
         return;
+      if ((e.key === 'z' || e.key === 'Z') && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
       if (phase === 'question') {
         if (e.key === ' ' || e.key === 'Enter') {
           e.preventDefault();
@@ -250,7 +307,7 @@ function ReviewPage() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [phase, card, handleFlip, handleAnswer]);
+  }, [phase, card, handleFlip, handleAnswer, handleUndo]);
 
   const handleReschedule = useCallback(
     async (days: number) => {
@@ -261,6 +318,7 @@ function ReviewPage() {
           cardId: card.cardId,
           days,
         });
+        setHistory((h) => [...h, { countedAsProgress: true, steps: 2 }]);
         refreshStreakOnce();
         await advanceCard(true);
       } catch {
@@ -309,6 +367,36 @@ function ReviewPage() {
       <ReviewProgress reviewed={reviewed} total={total} medianMs={medianMs} />
 
       <div className="mx-auto w-full max-w-2xl pt-4">
+        {/* Step back to re-rate the previous card — height reserved so the card
+            below doesn't jump when the control appears after the first answer. */}
+        <div className="mb-3 flex h-8 items-center">
+          <AnimatePresence>
+            {history.length > 0 && (
+              <motion.button
+                key="undo"
+                onClick={handleUndo}
+                disabled={undoing}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                whileTap={{ scale: 0.96 }}
+                className="group inline-flex items-center gap-2 rounded-full border border-milk-200/70 bg-milk-50/80 py-1.5 pl-2.5 pr-3 text-xs font-medium text-ink-400 shadow-soft transition-colors hover:border-milk-300 hover:bg-milk-100 hover:text-ink-700 disabled:cursor-wait disabled:opacity-50"
+              >
+                <Undo2
+                  className={`size-3.5 transition-transform group-hover:-rotate-12 ${
+                    undoing ? 'animate-spin' : ''
+                  }`}
+                />
+                previous card
+                <kbd className="ml-0.5 rounded border border-milk-300/70 bg-milk-200/50 px-1 font-mono text-[10px] leading-tight text-ink-300">
+                  Z
+                </kbd>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
+
         <ReviewCard
           cardId={card.cardId}
           noteId={card.noteId}

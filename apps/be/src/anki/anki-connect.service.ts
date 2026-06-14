@@ -316,6 +316,44 @@ export class AnkiConnectService {
     return this.invoke<boolean>('guiAnswerCard', { ease });
   }
 
+  /** Step Anki's undo stack back so a mis-tapped ease can be re-rated, then
+   *  return the previous card with its answer revealed.
+   *
+   *  `guiUndo` reverts the scheduling (re-queuing the previous card) but leaves
+   *  the reviewer parked on the current card — it does not navigate back on its
+   *  own. So after undoing, reload the deck's review (`guiDeckReview`) to pull
+   *  the re-queued card to the front, retrying until the displayed card id
+   *  differs from `currentCardId` (the undo runs as a background op, so the
+   *  first reload can race its completion). The reloaded reviewer shows the
+   *  question side, which the UI keeps so the card can be re-read before
+   *  re-rating. Falls back to whatever the reviewer shows if it never changes,
+   *  so the caller can detect a no-op by the id staying the same. */
+  async undoReview(
+    currentCardId: number,
+    steps: number,
+    deckName: string,
+  ): Promise<ReviewCard | null> {
+    for (let i = 0; i < steps; i++) {
+      await this.invoke<unknown>('guiUndo');
+      await this.sleep(40);
+    }
+
+    for (let attempt = 0; attempt < 25; attempt++) {
+      await this.sleep(80);
+      await this.invoke<boolean>('guiDeckReview', { name: deckName });
+      const card = await this.getCurrentCard();
+      if (card && card.cardId !== currentCardId) {
+        return card;
+      }
+    }
+
+    return this.getCurrentCard();
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   async rescheduleCard(cardId: number, days: number): Promise<void> {
     await this.invoke<void>('setDueDate', {
       cards: [cardId],
