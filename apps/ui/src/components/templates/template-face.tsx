@@ -35,29 +35,36 @@ export function TemplateFace({
 
   return (
     <div
-      className="col-start-1 row-start-1 overflow-hidden rounded-3xl border border-milk-200/60 bg-milk-50/95 shadow-medium"
+      className="col-start-1 row-start-1 max-h-[60vh] overflow-hidden rounded-3xl border border-milk-200/60 bg-milk-50/95 shadow-medium"
       style={{
         backfaceVisibility: 'hidden',
         transform: backface ? 'rotateY(180deg)' : undefined,
       }}
     >
       <div className={`absolute inset-0 ${gradient}`} />
-      <div className="relative flex h-full flex-col items-center justify-center gap-4 px-10 py-12 text-center">
-        {showFront && (
-          <>
-            {frontBlocks.map((b) => (
+      {/* Scroll long content within the card so it never overflows the viewport.
+          `m-auto` (not justify-center) centers short content while keeping the
+          top reachable once the content is taller than the card. */}
+      <div className="relative flex h-full flex-col overflow-y-auto px-10 py-12">
+        <div className="m-auto flex flex-col items-center gap-4 text-center">
+          {showFront && (
+            <>
+              {frontBlocks.map((b) => (
+                <BlockView key={b.id} block={b} fields={fields} />
+              ))}
+              <div className="mx-auto h-px w-24 bg-milk-300/80" />
+            </>
+          )}
+          {blocks.length === 0 ? (
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-300">
+              empty {side}
+            </span>
+          ) : (
+            blocks.map((b) => (
               <BlockView key={b.id} block={b} fields={fields} />
-            ))}
-            <div className="mx-auto h-px w-24 bg-milk-300/80" />
-          </>
-        )}
-        {blocks.length === 0 ? (
-          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-300">
-            empty {side}
-          </span>
-        ) : (
-          blocks.map((b) => <BlockView key={b.id} block={b} fields={fields} />)
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
