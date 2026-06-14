@@ -9,18 +9,25 @@ import { extractAudio, renderBlockHtml, sanitizeHtml } from '@nts/shared';
  *  live review card, so what you build equals what you study. Text/raw blocks
  *  come from the shared `renderBlockHtml`; `audio`/`image` render as components.
  *  The card-level wrappers (perspective, flip, tilt, dismiss) live in the
- *  callers (`TemplateCard`, `ReviewCard`). */
+ *  callers (`TemplateCard`, `ReviewCard`).
+ *
+ *  `frontBlocks` mirrors Anki's `{{FrontSide}}`: when given on the back face, the
+ *  front content is rendered on top, a divider below it, then the back blocks —
+ *  so flipping never hides the question. */
 export function TemplateFace({
   blocks,
   fields,
   side,
   backface = false,
+  frontBlocks,
 }: {
   blocks: Block[];
   fields: NoteFields;
   side: 'front' | 'back';
   backface?: boolean;
+  frontBlocks?: Block[];
 }) {
+  const showFront = side === 'back' && !!frontBlocks;
   const gradient =
     side === 'front'
       ? 'bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(234,219,200,0.3)_0%,transparent_60%)] dark:bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(247,236,210,0.05)_0%,transparent_60%)]'
@@ -36,6 +43,14 @@ export function TemplateFace({
     >
       <div className={`absolute inset-0 ${gradient}`} />
       <div className="relative flex h-full flex-col items-center justify-center gap-4 px-10 py-12 text-center">
+        {showFront && (
+          <>
+            {frontBlocks.map((b) => (
+              <BlockView key={b.id} block={b} fields={fields} />
+            ))}
+            <div className="mx-auto h-px w-24 bg-milk-300/80" />
+          </>
+        )}
         {blocks.length === 0 ? (
           <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-300">
             empty {side}

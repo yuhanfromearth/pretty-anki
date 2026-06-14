@@ -383,11 +383,7 @@ function ReviewPage() {
                 whileTap={{ scale: 0.96 }}
                 className="group inline-flex items-center gap-2 rounded-full border border-milk-200/70 bg-milk-50/80 py-1.5 pl-2.5 pr-3 text-xs font-medium text-ink-400 shadow-soft transition-colors hover:border-milk-300 hover:bg-milk-100 hover:text-ink-700 disabled:cursor-wait disabled:opacity-50"
               >
-                <Undo2
-                  className={`size-3.5 transition-transform group-hover:-rotate-12 ${
-                    undoing ? 'animate-spin' : ''
-                  }`}
-                />
+                <Undo2 className="size-3.5 transition-transform group-hover:-rotate-12" />
                 previous card
                 <kbd className="ml-0.5 rounded border border-milk-300/70 bg-milk-200/50 px-1 font-mono text-[10px] leading-tight text-ink-300">
                   Z

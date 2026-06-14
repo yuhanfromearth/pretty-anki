@@ -224,6 +224,7 @@ export function ReviewCard({
                 fields={fields}
                 side="back"
                 backface
+                frontBlocks={template.front}
               />
             </>
           ) : (

@@ -37,7 +37,13 @@ export function TemplateCard({
         onClick={onFlip}
       >
         <TemplateFace blocks={front} fields={fields} side="front" />
-        <TemplateFace blocks={back} fields={fields} side="back" backface />
+        <TemplateFace
+          blocks={back}
+          fields={fields}
+          side="back"
+          backface
+          frontBlocks={front}
+        />
       </motion.div>
     </div>
   );
