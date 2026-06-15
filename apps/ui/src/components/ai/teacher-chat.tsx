@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -60,6 +60,13 @@ export function TeacherChat({
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Refs + a measured spacer let us pin the latest turn's user message to the
+  // top of the transcript (kontekst-style), so a fresh question is the only
+  // thing visible until the reply streams in beneath it.
+  const lastUserMessageRef = useRef<HTMLDivElement>(null);
+  const lastAssistantMessageRef = useRef<HTMLDivElement>(null);
+  const [spacerHeight, setSpacerHeight] = useState(0);
+  const pendingScrollRef = useRef(false);
   // Whether this open-session has picked its default (most-recent) conversation.
   const initializedRef = useRef(false);
 
@@ -114,11 +121,73 @@ export function TeacherChat({
     setInput('');
   }, [open]);
 
-  // Keep the transcript pinned to the latest line as it grows / streams.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+  // Size the trailing spacer so the latest turn's user message can sit at the
+  // very top of the transcript. When the reply is the last thing rendered
+  // (streaming or finished) we also reserve room for it; otherwise the user
+  // message alone fills the viewport. Recomputing as the reply streams keeps
+  // the user message pinned while the answer grows beneath it.
+  const GAP = 16; // space-y-4
+  const recalculate = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const containerHeight = container.clientHeight;
+    const userHeight = lastUserMessageRef.current?.clientHeight ?? 0;
+    const assistantLast =
+      streamingText !== null ||
+      messages[messages.length - 1]?.role === 'assistant';
+
+    if (assistantLast) {
+      const assistantHeight =
+        lastAssistantMessageRef.current?.clientHeight ?? 0;
+      setSpacerHeight(
+        Math.max(0, containerHeight - userHeight - assistantHeight - GAP * 2)
+      );
+    } else {
+      setSpacerHeight(Math.max(0, containerHeight - userHeight - GAP));
+    }
+
+    // Scroll here (rather than in a spacerHeight effect) so it fires even when
+    // the height is unchanged — e.g. reopening on an already-sized container.
+    if (pendingScrollRef.current) {
+      pendingScrollRef.current = false;
+      requestAnimationFrame(() => {
+        lastUserMessageRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      });
+    }
   }, [messages, streamingText]);
+
+  // Keep the freshest recalculate in a ref so the ResizeObserver below can stay
+  // mounted across streaming deltas without re-running its setup.
+  const recalcRef = useRef(recalculate);
+  recalcRef.current = recalculate;
+
+  // On each new message (and on container resize) measure and scroll the latest
+  // user message to the top.
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    pendingScrollRef.current = true;
+    const run = () => recalcRef.current();
+    const raf = requestAnimationFrame(run);
+    const observer = new ResizeObserver(run);
+    observer.observe(container);
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, [messages.length, open, selectedId]);
+
+  // Re-measure as the reply streams so the spacer shrinks to fit the growing
+  // answer without re-triggering the scroll. Skip the initial empty-string
+  // transition (the typing-dots bubble): the message-length effect below owns
+  // the send-time scroll, and recalculating synchronously here would consume
+  // its pending scroll before the new spacer is committed to the DOM.
+  useEffect(() => {
+    if (streamingText) recalcRef.current();
+  }, [streamingText]);
 
   // Focus the composer when opening or switching threads (not mid-stream).
   useEffect(() => {
@@ -213,10 +282,21 @@ export function TeacherChat({
 
   const conversations = listQuery.data?.conversations ?? [];
   const empty = messages.length === 0 && streamingText === null;
+  const lastUserIdx = messages.findLastIndex((m) => m.role === 'user');
+  // While a reply streams the streaming bubble is the last assistant line, so
+  // only mark a message as the assistant anchor once streaming has finished.
+  const lastAssistantIdx =
+    messages[messages.length - 1]?.role === 'assistant'
+      ? messages.length - 1
+      : -1;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[600px] max-h-[85vh] w-full max-w-4xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent
+        initialFocus={textareaRef}
+        finalFocus={false}
+        className="flex h-[600px] max-h-[85vh] w-full max-w-4xl flex-col gap-0 overflow-hidden p-0"
+      >
         {/* Header: title, conversation switcher, new chat, close */}
         <div className="flex items-center gap-2 border-b border-milk-200/70 px-4 py-3">
           <div className="flex size-7 items-center justify-center rounded-lg bg-mint-500/15 text-mint-700 dark:text-mint-500">
@@ -237,7 +317,7 @@ export function TeacherChat({
                   History
                 </PopoverTrigger>
                 <PopoverContent className="w-64 p-1.5" align="end">
-                  <p className="px-2 py-1.5 font-mono text-[10px] font-semibold tracking-[0.16em] text-ink-300 uppercase">
+                  <p className="px-2.5 py-1.5 font-mono text-[10px] font-semibold tracking-[0.16em] text-ink-300 uppercase">
                     Conversations
                   </p>
                   <div className="max-h-72 overflow-y-auto">
@@ -249,7 +329,7 @@ export function TeacherChat({
                           switchTo(c.id);
                           setHistoryOpen(false);
                         }}
-                        className={`flex w-full flex-col items-start gap-0.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-milk-100 ${
+                        className={`flex w-full flex-col items-start gap-0.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-milk-100 ${
                           c.id === selectedId ? 'bg-milk-100' : ''
                         }`}
                       >
@@ -283,7 +363,7 @@ export function TeacherChat({
         {/* Transcript */}
         <div
           ref={scrollRef}
-          className="flex-1 space-y-4 overflow-y-auto px-4 py-4"
+          className="flex-1 space-y-4 overflow-y-auto px-4 py-4 scroll-pt-4"
         >
           {empty && (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
@@ -301,17 +381,40 @@ export function TeacherChat({
           )}
 
           {messages.map((m, i) => (
-            <MessageBubble key={i} role={m.role} content={m.content} />
+            <MessageBubble
+              key={i}
+              role={m.role}
+              content={m.content}
+              ref={
+                m.role === 'user' && i === lastUserIdx
+                  ? lastUserMessageRef
+                  : streamingText === null && i === lastAssistantIdx
+                    ? lastAssistantMessageRef
+                    : undefined
+              }
+            />
           ))}
 
           {streamingText !== null && (
-            <MessageBubble role="assistant" content={streamingText} />
+            <MessageBubble
+              ref={lastAssistantMessageRef}
+              role="assistant"
+              content={streamingText}
+            />
           )}
 
           {error && (
             <div className="rounded-xl border border-terra/30 bg-terra/10 px-3 py-2 text-xs text-terra">
               {error}
             </div>
+          )}
+
+          {!empty && (
+            <div
+              aria-hidden="true"
+              style={{ height: spacerHeight }}
+              className="shrink-0"
+            />
           )}
         </div>
 
@@ -354,16 +457,13 @@ export function TeacherChat({
   );
 }
 
-function MessageBubble({
-  role,
-  content,
-}: {
-  role: AiMessage['role'];
-  content: string;
-}) {
+const MessageBubble = forwardRef<
+  HTMLDivElement,
+  { role: AiMessage['role']; content: string }
+>(function MessageBubble({ role, content }, ref) {
   if (role === 'user') {
     return (
-      <div className="flex justify-end">
+      <div ref={ref} className="flex justify-end">
         <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-mint-500 px-3.5 py-2 text-sm text-white dark:text-cocoa-950">
           {content}
         </div>
@@ -372,6 +472,7 @@ function MessageBubble({
   }
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       className="max-w-[92%]"
@@ -385,7 +486,7 @@ function MessageBubble({
       </div>
     </motion.div>
   );
-}
+});
 
 function TypingDots() {
   return (
