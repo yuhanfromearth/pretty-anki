@@ -241,7 +241,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 Daily progress
               </Label>
               <span className="text-xs text-ink-300">
-                Count today&rsquo;s earlier reviews in the bar
+                Count today&rsquo;s earlier reviews in the progress bar
               </span>
             </div>
             <button
