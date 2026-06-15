@@ -277,6 +277,15 @@ body {
   }
 }
 
+/* Hide scrollbar visually while keeping the element scrollable. */
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* TipTap field editor content — Korean falls back to Noto Serif KR. */
 .tiptap-field {
   font-family: 'Inter Tight', 'Noto Serif KR', sans-serif;

@@ -127,7 +127,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] max-w-sm overflow-y-auto p-6">
+      <DialogContent className="max-h-[88vh] max-w-md overflow-y-auto overscroll-contain scrollbar-hide p-6">
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="font-mono text-[10px] font-semibold tracking-[0.2em] text-ink-300 uppercase">
