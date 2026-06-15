@@ -48,7 +48,7 @@ export function ReviewProgress({
                 className={`${isFifth ? 'h-3' : 'h-2'} flex-1 rounded-sm transition-colors duration-300 ${
                   isFilled
                     ? isFifth
-                      ? 'bg-mint-600 dark:bg-mint-400'
+                      ? 'bg-mint-700 dark:bg-mint-300'
                       : 'bg-mint-500'
                     : isCurrent
                       ? 'bg-mint-300'

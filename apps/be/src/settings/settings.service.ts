@@ -16,6 +16,7 @@ interface StoredSettings {
   avatar: string | null;
   cardTilt?: boolean;
   soundEffects?: boolean;
+  dailyProgress?: boolean;
   aiSystemPrompt: string | null;
   aiModel: string | null;
   openRouterApiKey: string | null;
@@ -26,6 +27,7 @@ const DEFAULT_STORED: StoredSettings = {
   avatar: null,
   cardTilt: true,
   soundEffects: true,
+  dailyProgress: true,
   aiSystemPrompt: null,
   aiModel: null,
   openRouterApiKey: null,
@@ -54,6 +56,7 @@ export class SettingsService {
       avatar: stored.avatar,
       cardTilt: stored.cardTilt,
       soundEffects: stored.soundEffects,
+      dailyProgress: stored.dailyProgress,
       aiSystemPrompt: stored.aiSystemPrompt,
       aiModel: stored.aiModel,
       hasApiKey: !!stored.openRouterApiKey,
@@ -81,6 +84,7 @@ export class SettingsService {
       avatar: update.avatar,
       cardTilt: update.cardTilt,
       soundEffects: update.soundEffects,
+      dailyProgress: update.dailyProgress,
       aiSystemPrompt: update.aiSystemPrompt,
       aiModel: update.aiModel,
       openRouterApiKey,

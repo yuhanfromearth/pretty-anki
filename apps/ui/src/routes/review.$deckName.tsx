@@ -6,6 +6,7 @@ import { ArrowLeft, Undo2, Sparkles } from 'lucide-react';
 import type {
   ReviewCard as ReviewCardType,
   ReviewPace,
+  ReviewSession,
   UserSettings,
 } from '@nts/shared';
 import {
@@ -71,20 +72,27 @@ function ReviewPage() {
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [card, setCard] = useState<ReviewCardType | null>(null);
-  const [total, setTotal] = useState(0);
-  const [reviewed, setReviewed] = useState(0);
+  // The server baseline for this deck at session start (today's reviews so far,
+  // the day total, and the live remaining count). The progress bar is derived
+  // from this plus the in-session counters below, so the daily-progress toggle
+  // reflects instantly without reseeding or losing this visit's work.
+  const [session, setSession] = useState<ReviewSession | null>(null);
+  // Cards answered this visit, split by whether the chosen interval keeps them
+  // in today's queue (short) or graduates them out of it (long).
+  const [sessionShort, setSessionShort] = useState(0);
+  const [sessionLong, setSessionLong] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [medianMs, setMedianMs] = useState<number | undefined>();
   const [dismiss, setDismiss] = useState<CardDismiss | null>(null);
   const dismissing = useRef(false);
   // Stack of answered cards, newest last, so the user can step back to re-rate a
-  // card whose ease they mis-tapped. Each entry records whether the answer
-  // counted toward the progress bar (so undo can roll it back) and how many
-  // Anki undo steps it took — a reschedule is an answer plus a setDueDate.
-  const [history, setHistory] = useState<
-    { countedAsProgress: boolean; steps: number }[]
-  >([]);
+  // card whose ease they mis-tapped. Each entry records whether the answer kept
+  // the card in today's queue (so undo decrements the right counter) and how
+  // many Anki undo steps it took — a reschedule is an answer plus a setDueDate.
+  const [history, setHistory] = useState<{ isShort: boolean; steps: number }[]>(
+    []
+  );
   const [undoing, setUndoing] = useState(false);
   const undoingRef = useRef(false);
   // The AI teacher chat, available only once the answer is revealed and an
@@ -107,6 +115,27 @@ function ReviewPage() {
   const cardTilt = settingsQuery.data?.cardTilt ?? true;
   const soundEffects = settingsQuery.data?.soundEffects ?? true;
   const hasApiKey = settingsQuery.data?.hasApiKey ?? false;
+  // When on, the bar spans the whole day: it resumes today's earlier reviews
+  // after a refresh and its total only ever grows. Off restores the old
+  // per-session bar that starts at zero each visit.
+  const dailyProgress = settingsQuery.data?.dailyProgress ?? true;
+
+  // Progress bar values, derived (not stored) so toggling daily-progress — or
+  // undoing — is reflected immediately. Daily mode resumes from the server
+  // baseline and counts every answer; a short interval also grows the day total
+  // (the card stays in today's queue). Per-session mode counts only this visit's
+  // graduated cards against the fixed remaining count.
+  let reviewed = 0;
+  let total = 0;
+  if (session) {
+    if (dailyProgress) {
+      reviewed = session.reviewedToday + sessionLong + sessionShort;
+      total = session.dayTotal + sessionShort;
+    } else {
+      reviewed = sessionLong;
+      total = session.remaining;
+    }
+  }
 
   // Resolve the current note type to its app-native Template so the live card
   // renders with the same roles + custom CSS as the builder/manage previews.
@@ -145,14 +174,15 @@ function ReviewPage() {
   const startSession = useCallback(async () => {
     try {
       setPhase('loading');
-      const [session, pace] = await Promise.all([
-        postJson<{ remaining: number }>(
+      const [newSession, pace] = await Promise.all([
+        postJson<ReviewSession>(
           `/api/anki/review/start/${encodeURIComponent(decoded)}`
         ),
         fetchJson<ReviewPace>('/api/anki/review-pace').catch(() => null),
       ]);
-      setTotal(session.remaining);
-      setReviewed(0);
+      setSession(newSession);
+      setSessionShort(0);
+      setSessionLong(0);
       setHistory([]);
       if (pace) setMedianMs(pace.medianMs);
 
@@ -194,8 +224,7 @@ function ReviewPage() {
     queryClient.invalidateQueries({ queryKey: ['streak'] });
   }, [queryClient]);
 
-  const advanceCard = useCallback(async (countsAsProgress: boolean) => {
-    if (countsAsProgress) setReviewed((r) => r + 1);
+  const advanceCard = useCallback(async () => {
     try {
       const next = await fetchJson<ReviewCardType | null>(
         '/api/anki/review/current'
@@ -222,25 +251,27 @@ function ReviewPage() {
       dismissing.current = true;
 
       const nextReview = card.nextReviews[buttonIndex] ?? '';
-      const countsAsProgress = !isShortInterval(nextReview);
-      const direction = isShortInterval(nextReview) ? 'left' : 'right';
+      const isShort = isShortInterval(nextReview);
+      const direction = isShort ? 'left' : 'right';
       if (soundEffects) {
         if (direction === 'right') playCorrectSound();
         else playSwipeSound();
       }
       setDismiss({ direction, color: DISMISS_COLOR[ease] ?? DISMISS_COLOR[3] });
 
+      const countAnswer = () =>
+        isShort ? setSessionShort((s) => s + 1) : setSessionLong((s) => s + 1);
+
       setTimeout(async () => {
         try {
           await postJson('/api/anki/review/answer', { ease });
-          setHistory((h) => [
-            ...h,
-            { countedAsProgress: countsAsProgress, steps: 1 },
-          ]);
+          setHistory((h) => [...h, { isShort, steps: 1 }]);
+          countAnswer();
           refreshStreakOnce();
-          await advanceCard(countsAsProgress);
+          await advanceCard();
         } catch {
-          await advanceCard(countsAsProgress);
+          countAnswer();
+          await advanceCard();
         }
       }, 420);
     },
@@ -248,8 +279,8 @@ function ReviewPage() {
   );
 
   // Step back to the previous card via Anki's undo stack and reveal its answer,
-  // so a mis-tapped ease can be corrected. Roll back the progress bar by the
-  // same amount the answer advanced it.
+  // so a mis-tapped ease can be corrected. Roll back the in-session counter the
+  // answer bumped so the progress bar follows.
   const handleUndo = useCallback(async () => {
     if (dismissing.current || undoingRef.current || !card) return;
     if (phase !== 'question' && phase !== 'answer') return;
@@ -270,7 +301,8 @@ function ReviewPage() {
       );
       if (!prev || prev.cardId === fromId) return;
       setHistory((h) => h.slice(0, -1));
-      if (last.countedAsProgress) setReviewed((r) => Math.max(0, r - 1));
+      if (last.isShort) setSessionShort((s) => Math.max(0, s - 1));
+      else setSessionLong((s) => Math.max(0, s - 1));
       setDismiss(null);
       setCard(prev);
       // Return on the question side so the card can be re-read before re-rating.
@@ -343,11 +375,15 @@ function ReviewPage() {
           cardId: card.cardId,
           days,
         });
-        setHistory((h) => [...h, { countedAsProgress: true, steps: 2 }]);
+        // A reschedule sends the card out to a future day, so it leaves today's
+        // queue — a long clear that advances the bar in either mode.
+        setHistory((h) => [...h, { isShort: false, steps: 2 }]);
+        setSessionLong((s) => s + 1);
         refreshStreakOnce();
-        await advanceCard(true);
+        await advanceCard();
       } catch {
-        await advanceCard(true);
+        setSessionLong((s) => s + 1);
+        await advanceCard();
       }
     },
     [card, advanceCard, refreshStreakOnce]

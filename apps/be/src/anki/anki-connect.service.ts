@@ -184,13 +184,32 @@ export class AnkiConnectService {
 
   async startReview(deckName: string): Promise<ReviewSession> {
     await this.invoke<boolean>('guiDeckReview', { name: deckName });
-    const stats = await this.invoke<Record<string, AnkiDeckStats>>(
-      'getDeckStats',
-      { decks: [deckName] },
-    );
+    const [stats, reviewedToday] = await Promise.all([
+      this.invoke<Record<string, AnkiDeckStats>>('getDeckStats', {
+        decks: [deckName],
+      }),
+      this.countReviewsToday(deckName),
+    ]);
     const s = Object.values(stats)[0];
     const remaining = s ? s.new_count + s.learn_count + s.review_count : 0;
-    return { remaining };
+    // The day's denominator grows as cards are added or worked but never as the
+    // queue empties, so a mid-day refresh resumes the bar instead of resetting.
+    return { remaining, reviewedToday, dayTotal: reviewedToday + remaining };
+  }
+
+  /** Number of reviews logged today for a deck — revlog events, so relearning
+   *  repeats each count, matching Anki's "studied N cards today". Used to resume
+   *  the day's progress bar after a refresh. The day boundary is local midnight;
+   *  Anki's own rollover (default 4am) may differ slightly for late-night
+   *  reviewers, which is acceptable for a progress estimate. */
+  private async countReviewsToday(deckName: string): Promise<number> {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const reviews = await this.invoke<AnkiReviewTuple[]>('cardReviews', {
+      deck: deckName,
+      startID: start.getTime(),
+    });
+    return reviews.length;
   }
 
   async getCurrentCard(): Promise<ReviewCard | null> {

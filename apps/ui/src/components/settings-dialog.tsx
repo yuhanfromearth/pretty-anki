@@ -42,6 +42,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [cardTilt, setCardTilt] = useState(true);
   const [soundEffects, setSoundEffects] = useState(true);
+  const [dailyProgress, setDailyProgress] = useState(true);
   const [aiSystemPrompt, setAiSystemPrompt] = useState('');
   const [aiModel, setAiModel] = useState('');
   // The key is write-only: this input is always blank on open. `removeKey`
@@ -57,6 +58,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       setAvatar(settings.data.avatar ?? null);
       setCardTilt(settings.data.cardTilt ?? true);
       setSoundEffects(settings.data.soundEffects ?? true);
+      setDailyProgress(settings.data.dailyProgress ?? true);
       setAiSystemPrompt(settings.data.aiSystemPrompt ?? '');
       setAiModel(settings.data.aiModel ?? '');
       setApiKeyInput('');
@@ -115,6 +117,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       avatar,
       cardTilt,
       soundEffects,
+      dailyProgress,
       aiSystemPrompt: aiSystemPrompt.trim() || null,
       aiModel: aiModel.trim() || null,
       apiKey: apiKeyInput.trim() || undefined,
@@ -232,6 +235,29 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </button>
           </div>
 
+          <div className="w-full flex items-center justify-between">
+            <div className="flex flex-col gap-0.5">
+              <Label htmlFor="daily-progress" className="text-ink-600">
+                Daily progress
+              </Label>
+              <span className="text-xs text-ink-300">
+                Count today&rsquo;s earlier reviews in the bar
+              </span>
+            </div>
+            <button
+              id="daily-progress"
+              type="button"
+              role="switch"
+              aria-checked={dailyProgress}
+              onClick={() => setDailyProgress((v) => !v)}
+              className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 ${dailyProgress ? 'bg-mint-500' : 'bg-milk-300'}`}
+            >
+              <span
+                className={`pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform ${dailyProgress ? 'translate-x-4' : 'translate-x-0'}`}
+              />
+            </button>
+          </div>
+
           <Separator className="my-1" />
 
           <div className="w-full space-y-3">
@@ -250,7 +276,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 id="ai-system-prompt"
                 value={aiSystemPrompt}
                 onChange={(e) => setAiSystemPrompt(e.target.value)}
-                placeholder="You are a Korean language teacher. Explain usage, conjugation and give natural example sentences…"
+                placeholder="Act as a patient Korean language teacher for absolute beginners. Your name is 전정국."
                 className="min-h-24"
               />
             </div>

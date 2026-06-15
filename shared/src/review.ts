@@ -37,7 +37,16 @@ export const RescheduleCardSchema = z.object({
 });
 
 export const ReviewSessionSchema = z.object({
+  // Cards due right now in the deck (new + learning + review).
   remaining: z.number(),
+  // Reviews logged today for this deck, counting relearning repeats, from
+  // Anki's revlog. Lets the progress bar resume mid-day after a page refresh
+  // instead of restarting at zero.
+  reviewedToday: z.number(),
+  // The day's denominator: cards that were due at the start of today plus any
+  // added since. Equal to reviewedToday + remaining, which only grows as the
+  // queue is worked or new cards appear — so the bar never jumps backwards.
+  dayTotal: z.number(),
 });
 
 export const UndoReviewSchema = z.object({
