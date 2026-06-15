@@ -41,6 +41,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [displayName, setDisplayName] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
   const [cardTilt, setCardTilt] = useState(true);
+  const [soundEffects, setSoundEffects] = useState(true);
   const [aiSystemPrompt, setAiSystemPrompt] = useState('');
   const [aiModel, setAiModel] = useState('');
   // The key is write-only: this input is always blank on open. `removeKey`
@@ -55,6 +56,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       setDisplayName(settings.data.displayName ?? '');
       setAvatar(settings.data.avatar ?? null);
       setCardTilt(settings.data.cardTilt ?? true);
+      setSoundEffects(settings.data.soundEffects ?? true);
       setAiSystemPrompt(settings.data.aiSystemPrompt ?? '');
       setAiModel(settings.data.aiModel ?? '');
       setApiKeyInput('');
@@ -112,6 +114,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       displayName: displayName.trim() || null,
       avatar,
       cardTilt,
+      soundEffects,
       aiSystemPrompt: aiSystemPrompt.trim() || null,
       aiModel: aiModel.trim() || null,
       apiKey: apiKeyInput.trim() || undefined,
@@ -207,6 +210,24 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             >
               <span
                 className={`pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform ${cardTilt ? 'translate-x-4' : 'translate-x-0'}`}
+              />
+            </button>
+          </div>
+
+          <div className="w-full flex items-center justify-between">
+            <Label htmlFor="sound-effects" className="text-ink-600">
+              Swipe sounds
+            </Label>
+            <button
+              id="sound-effects"
+              type="button"
+              role="switch"
+              aria-checked={soundEffects}
+              onClick={() => setSoundEffects((v) => !v)}
+              className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 ${soundEffects ? 'bg-mint-500' : 'bg-milk-300'}`}
+            >
+              <span
+                className={`pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform ${soundEffects ? 'translate-x-4' : 'translate-x-0'}`}
               />
             </button>
           </div>

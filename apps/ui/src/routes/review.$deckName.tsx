@@ -17,6 +17,7 @@ import { AnswerBar } from '#/components/review/answer-bar';
 import { ReviewProgress } from '#/components/review/review-progress';
 import { ReviewComplete } from '#/components/review/review-complete';
 import { TeacherChat } from '#/components/ai/teacher-chat';
+import { playCorrectSound, playSwipeSound } from '#/lib/sounds';
 import {
   fetchTemplate,
   fetchTemplates,
@@ -104,6 +105,7 @@ function ReviewPage() {
     },
   });
   const cardTilt = settingsQuery.data?.cardTilt ?? true;
+  const soundEffects = settingsQuery.data?.soundEffects ?? true;
   const hasApiKey = settingsQuery.data?.hasApiKey ?? false;
 
   // Resolve the current note type to its app-native Template so the live card
@@ -222,6 +224,10 @@ function ReviewPage() {
       const nextReview = card.nextReviews[buttonIndex] ?? '';
       const countsAsProgress = !isShortInterval(nextReview);
       const direction = isShortInterval(nextReview) ? 'left' : 'right';
+      if (soundEffects) {
+        if (direction === 'right') playCorrectSound();
+        else playSwipeSound();
+      }
       setDismiss({ direction, color: DISMISS_COLOR[ease] ?? DISMISS_COLOR[3] });
 
       setTimeout(async () => {
@@ -238,7 +244,7 @@ function ReviewPage() {
         }
       }, 420);
     },
-    [card, advanceCard, refreshStreakOnce]
+    [card, advanceCard, refreshStreakOnce, soundEffects]
   );
 
   // Step back to the previous card via Anki's undo stack and reveal its answer,
