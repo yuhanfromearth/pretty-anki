@@ -1,12 +1,17 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { extractAudio, stripHtml } from '@nts/shared';
+import {
+  computeStreak,
+  computeReviewPace,
+  formatReviewCard,
+} from '@nts/shared';
 import type {
   DeckStats,
   DeckStatsItem,
   Streak,
   ReviewPace,
   ReviewCard,
+  RawCurrentCard,
   ReviewSession,
   Note,
   NoteList,
@@ -118,51 +123,7 @@ export class AnkiConnectService {
     const reviewed = await this.invoke<[string, number][]>(
       'getNumCardsReviewedByDay',
     );
-
-    const countByDate = new Map(reviewed.map(([date, count]) => [date, count]));
-
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
-    const reviewedToday = (countByDate.get(todayStr) ?? 0) > 0;
-
-    // Count the run of consecutive reviewed days ending at the last reviewed
-    // day. When today hasn't been reviewed yet, start from yesterday so `days`
-    // holds the standing streak through yesterday — the frozen value the UI
-    // shows until the first review of today bumps it to `days + 1`.
-    let days = 0;
-    for (let i = reviewedToday ? 0 : 1; i < 365; i++) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
-      const count = countByDate.get(dateStr) ?? 0;
-      if (count === 0) break;
-      days++;
-    }
-
-    // Dense daily history for the heat map: last HEATMAP_WEEKS Monday-aligned
-    // weeks through today, filling days with no reviews as 0. Uses UTC dates to
-    // stay consistent with the streak loop above (known UTC/local-day caveat).
-    const HEATMAP_WEEKS = 26; // ~6 months
-    const today = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-    );
-    const mondayOffset = (today.getUTCDay() + 6) % 7; // 0 = Monday
-    const start = new Date(today);
-    start.setUTCDate(
-      start.getUTCDate() - mondayOffset - (HEATMAP_WEEKS - 1) * 7,
-    );
-
-    const history: { date: string; count: number }[] = [];
-    for (
-      const d = new Date(start);
-      d <= today;
-      d.setUTCDate(d.getUTCDate() + 1)
-    ) {
-      const dateStr = d.toISOString().slice(0, 10);
-      history.push({ date: dateStr, count: countByDate.get(dateStr) ?? 0 });
-    }
-
-    return { days, reviewedToday, history };
+    return computeStreak(reviewed, new Date());
   }
 
   async getReviewPace(): Promise<ReviewPace> {
@@ -176,15 +137,9 @@ export class AnkiConnectService {
         startID: oneWeekAgo,
       });
       for (const r of reviews) {
-        const time = r[7];
-        if (time > 0 && time < 120000) {
-          allTimes.push(time);
-        }
+        allTimes.push(r[7]);
       }
     }
-
-    const medianMs =
-      allTimes.length > 0 ? this.median(allTimes.slice(-100)) : 8000;
 
     let totalDue = 0;
     const statsMap = await this.invoke<Record<string, AnkiDeckStats>>(
@@ -195,7 +150,7 @@ export class AnkiConnectService {
       totalDue += s.new_count + s.learn_count + s.review_count;
     }
 
-    return { medianMs, totalDue };
+    return computeReviewPace(allTimes, totalDue);
   }
 
   async createDeck(deckName: string): Promise<number> {
@@ -240,16 +195,7 @@ export class AnkiConnectService {
 
   async getCurrentCard(): Promise<ReviewCard | null> {
     try {
-      const card = await this.invoke<{
-        cardId: number;
-        question: string;
-        answer: string;
-        modelName: string;
-        fields: Record<string, { value: string; order: number }>;
-        deckName: string;
-        buttons: number[];
-        nextReviews: string[];
-      } | null>('guiCurrentCard');
+      const card = await this.invoke<RawCurrentCard | null>('guiCurrentCard');
       if (!card) return null;
 
       // guiCurrentCard includes neither the note id nor the card-template index,
@@ -259,50 +205,8 @@ export class AnkiConnectService {
         'cardsInfo',
         { cards: [card.cardId] },
       );
-      const noteId = info?.note ?? 0;
-      const ord = info?.ord ?? 0;
 
-      const fieldEntries = Object.entries(card.fields);
-      const allAudio = fieldEntries.flatMap(([, f]) => extractAudio(f.value));
-      // Raw field values keyed by name, for the app-native Template renderer.
-      const fields = Object.fromEntries(
-        fieldEntries.map(([name, f]) => [name, f.value]),
-      );
-
-      // Use the template-rendered question/answer rather than reconstructing
-      // from note fields by position: a single note can produce multiple cards
-      // (e.g. an inverted card swaps front/back), and only the rendered output
-      // reflects each card's own template. The answer HTML repeats the front
-      // followed by `<hr id=answer>`, so keep only the back half.
-      const question = stripHtml(card.question);
-      const answerBack =
-        card.answer.split(/<hr id=?["']?answer["']?\s*\/?>/i)[1] ?? card.answer;
-      const answer = stripHtml(answerBack);
-
-      // Only attribute audio to the front when the rendered question side
-      // actually references it — Anki marks sounds with `[anki:play:q:N]`
-      // (question) / `[anki:play:a:N]` (answer) placeholders, or leaves the raw
-      // `[sound:...]` form. Without this gate a sound that lives only on a back
-      // field would show a play button on the front. The back replays the
-      // front too, so it gets every sound.
-      const questionHasAudio = /\[anki:play:q:|\[sound:/.test(card.question);
-      const questionAudio = questionHasAudio ? allAudio : [];
-      const answerAudio = allAudio;
-
-      return {
-        cardId: card.cardId,
-        noteId,
-        ord,
-        modelName: card.modelName,
-        question,
-        answer,
-        deckName: card.deckName,
-        buttons: card.buttons,
-        nextReviews: card.nextReviews ?? [],
-        questionAudio,
-        answerAudio,
-        fields,
-      };
+      return formatReviewCard(card, info);
     } catch {
       return null;
     }
@@ -644,13 +548,5 @@ export class AnkiConnectService {
       query: `deck:"${deckName}" prop:ivl>=84`,
     });
     return cards.length;
-  }
-
-  private median(values: number[]): number {
-    const sorted = [...values].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0
-      ? (sorted[mid - 1] + sorted[mid]) / 2
-      : sorted[mid];
   }
 }
