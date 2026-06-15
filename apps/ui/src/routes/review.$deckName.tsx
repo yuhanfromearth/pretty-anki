@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Undo2 } from 'lucide-react';
+import { ArrowLeft, Undo2, Sparkles } from 'lucide-react';
 import type {
   ReviewCard as ReviewCardType,
   ReviewPace,
@@ -16,6 +16,7 @@ import {
 import { AnswerBar } from '#/components/review/answer-bar';
 import { ReviewProgress } from '#/components/review/review-progress';
 import { ReviewComplete } from '#/components/review/review-complete';
+import { TeacherChat } from '#/components/ai/teacher-chat';
 import {
   fetchTemplate,
   fetchTemplates,
@@ -85,6 +86,9 @@ function ReviewPage() {
   >([]);
   const [undoing, setUndoing] = useState(false);
   const undoingRef = useRef(false);
+  // The AI teacher chat, available only once the answer is revealed and an
+  // OpenRouter key is configured.
+  const [chatOpen, setChatOpen] = useState(false);
   // Refresh the header streak once per session — the first answered card may be
   // the first review of the day, which flips the badge from frozen to active
   // and rolls the count up. Guarded so we don't refetch on every card.
@@ -100,6 +104,7 @@ function ReviewPage() {
     },
   });
   const cardTilt = settingsQuery.data?.cardTilt ?? true;
+  const hasApiKey = settingsQuery.data?.hasApiKey ?? false;
 
   // Resolve the current note type to its app-native Template so the live card
   // renders with the same roles + custom CSS as the builder/manage previews.
@@ -280,6 +285,14 @@ function ReviewPage() {
         e.target instanceof HTMLTextAreaElement
       )
         return;
+      // While the teacher chat is open it owns the keyboard; ignore review
+      // shortcuts so typing doesn't rate cards or trigger undo.
+      if (chatOpen) return;
+      if (e.key === '/' && phase === 'answer' && hasApiKey) {
+        e.preventDefault();
+        setChatOpen(true);
+        return;
+      }
       if ((e.key === 'z' || e.key === 'Z') && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         handleUndo();
@@ -307,7 +320,13 @@ function ReviewPage() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [phase, card, handleFlip, handleAnswer, handleUndo]);
+  }, [phase, card, handleFlip, handleAnswer, handleUndo, chatOpen, hasApiKey]);
+
+  // Close the chat whenever the card changes so it never carries one note's
+  // conversation onto the next.
+  useEffect(() => {
+    setChatOpen(false);
+  }, [card?.noteId]);
 
   const handleReschedule = useCallback(
     async (days: number) => {
@@ -391,6 +410,33 @@ function ReviewPage() {
               </motion.button>
             )}
           </AnimatePresence>
+
+          <AnimatePresence>
+            {phase === 'answer' && (
+              <motion.button
+                key="teacher"
+                onClick={() => setChatOpen(true)}
+                disabled={!hasApiKey}
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                whileTap={hasApiKey ? { scale: 0.96 } : undefined}
+                title={
+                  hasApiKey
+                    ? undefined
+                    : 'Add an OpenRouter API key in settings to ask the teacher'
+                }
+                className="group ml-auto inline-flex items-center gap-2 rounded-full border border-milk-200/70 bg-milk-50/80 py-1.5 pl-2.5 pr-2 text-xs font-medium text-ink-400 shadow-soft transition-colors hover:border-mint-300 hover:bg-mint-50 hover:text-mint-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-milk-200/70 disabled:hover:bg-milk-50/80 disabled:hover:text-ink-400"
+              >
+                <Sparkles className="size-3.5 transition-transform group-hover:scale-110 group-disabled:scale-100" />
+                teacher
+                <kbd className="ml-0.5 rounded border border-milk-300/70 bg-milk-200/50 px-1 font-mono text-[10px] leading-tight text-ink-300">
+                  /
+                </kbd>
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
         <ReviewCard
@@ -419,6 +465,13 @@ function ReviewPage() {
           />
         </div>
       </div>
+
+      <TeacherChat
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        noteId={card.noteId}
+        context={{ modelName: card.modelName, fields: card.fields }}
+      />
     </div>
   );
 }

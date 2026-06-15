@@ -1,8 +1,9 @@
 import { useRef, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Camera, X } from 'lucide-react';
+import { Camera, X, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
-import type { UserSettings } from '@nts/shared';
+import type { UserSettings, UserSettingsUpdate } from '@nts/shared';
+import { DEFAULT_AI_MODEL } from '@nts/shared';
 import {
   Dialog,
   DialogContent,
@@ -10,8 +11,10 @@ import {
   DialogClose,
 } from '#/components/ui/dialog';
 import { Input } from '#/components/ui/input';
+import { Textarea } from '#/components/ui/textarea';
 import { Button } from '#/components/ui/button';
 import { Label } from '#/components/ui/label';
+import { Separator } from '#/components/ui/separator';
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const ACCEPT_STRING = '.png,.jpg,.jpeg,.webp,.gif';
@@ -38,17 +41,29 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [displayName, setDisplayName] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
   const [cardTilt, setCardTilt] = useState(true);
+  const [aiSystemPrompt, setAiSystemPrompt] = useState('');
+  const [aiModel, setAiModel] = useState('');
+  // The key is write-only: this input is always blank on open. `removeKey`
+  // stages clearing a previously-saved key on save.
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [removeKey, setRemoveKey] = useState(false);
+
+  const keyConfigured = settings.data?.hasApiKey ?? false;
 
   useEffect(() => {
     if (open && settings.data) {
       setDisplayName(settings.data.displayName ?? '');
       setAvatar(settings.data.avatar ?? null);
       setCardTilt(settings.data.cardTilt ?? true);
+      setAiSystemPrompt(settings.data.aiSystemPrompt ?? '');
+      setAiModel(settings.data.aiModel ?? '');
+      setApiKeyInput('');
+      setRemoveKey(false);
     }
   }, [open, settings.data]);
 
   const mutation = useMutation({
-    mutationFn: async (body: UserSettings) => {
+    mutationFn: async (body: UserSettingsUpdate) => {
       const r = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -97,12 +112,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       displayName: displayName.trim() || null,
       avatar,
       cardTilt,
+      aiSystemPrompt: aiSystemPrompt.trim() || null,
+      aiModel: aiModel.trim() || null,
+      apiKey: apiKeyInput.trim() || undefined,
+      removeApiKey: removeKey || undefined,
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm p-6">
+      <DialogContent className="max-h-[88vh] max-w-sm overflow-y-auto p-6">
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="font-mono text-[10px] font-semibold tracking-[0.2em] text-ink-300 uppercase">
@@ -190,6 +209,93 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 className={`pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform ${cardTilt ? 'translate-x-4' : 'translate-x-0'}`}
               />
             </button>
+          </div>
+
+          <Separator className="my-1" />
+
+          <div className="w-full space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-3.5 text-mint-600 dark:text-mint-500" />
+              <p className="font-mono text-[10px] font-semibold tracking-[0.2em] text-ink-300 uppercase">
+                AI Teacher
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="ai-system-prompt" className="text-ink-600">
+                Teacher instructions
+              </Label>
+              <Textarea
+                id="ai-system-prompt"
+                value={aiSystemPrompt}
+                onChange={(e) => setAiSystemPrompt(e.target.value)}
+                placeholder="You are a Korean language teacher. Explain usage, conjugation and give natural example sentences…"
+                className="min-h-24"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="ai-model" className="text-ink-600">
+                Model
+              </Label>
+              <Input
+                id="ai-model"
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+                placeholder={DEFAULT_AI_MODEL}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="ai-key" className="text-ink-600">
+                  OpenRouter API key
+                </Label>
+                {keyConfigured &&
+                  (removeKey ? (
+                    <button
+                      type="button"
+                      onClick={() => setRemoveKey(false)}
+                      className="text-xs text-ink-400 transition-colors hover:text-ink-600"
+                    >
+                      Keep key
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRemoveKey(true);
+                        setApiKeyInput('');
+                      }}
+                      className="text-xs text-terra transition-colors hover:opacity-80"
+                    >
+                      Remove
+                    </button>
+                  ))}
+              </div>
+              <Input
+                id="ai-key"
+                type="password"
+                autoComplete="off"
+                value={apiKeyInput}
+                onChange={(e) => {
+                  setApiKeyInput(e.target.value);
+                  if (e.target.value) setRemoveKey(false);
+                }}
+                placeholder={
+                  keyConfigured && !removeKey
+                    ? '•••••••••••• saved — type to replace'
+                    : 'sk-or-…'
+                }
+                className="font-mono text-xs"
+              />
+              {removeKey && (
+                <p className="text-xs text-terra">
+                  Key will be removed when you save.
+                </p>
+              )}
+            </div>
           </div>
 
           <Button

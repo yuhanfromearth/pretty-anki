@@ -10,6 +10,10 @@ import { SettingsController } from './settings/settings.controller.js';
 import { SettingsService } from './settings/settings.service.js';
 import { TemplatesController } from './templates/templates.controller.js';
 import { TemplatesService } from './templates/templates.service.js';
+import { AiController } from './ai/ai.controller.js';
+import { AiConversationService } from './ai/ai-conversation.service.js';
+import { ConversationStoreService } from './ai/conversation-store.service.js';
+import { LlmService } from './ai/llm.service.js';
 import { ConfigModule } from '@nestjs/config';
 import { APP_PIPE } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -37,12 +41,16 @@ const clientRoot = join(
     ReviewController,
     SettingsController,
     TemplatesController,
+    AiController,
   ],
   providers: [
     AppService,
     AnkiConnectService,
     SettingsService,
     TemplatesService,
+    AiConversationService,
+    ConversationStoreService,
+    LlmService,
     {
       provide: APP_PIPE,
       useClass: ZodValidationPipe,

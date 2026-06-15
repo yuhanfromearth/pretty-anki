@@ -4,6 +4,7 @@ export * from './create-deck.js';
 export * from './streak.js';
 export * from './review-pace.js';
 export * from './user-settings.js';
+export * from './ai-conversation.js';
 export * from './review.js';
 export * from './note.js';
 export * from './card-html.js';
