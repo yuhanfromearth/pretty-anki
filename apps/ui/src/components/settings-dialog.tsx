@@ -130,8 +130,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] max-w-md overflow-y-auto overscroll-contain scrollbar-hide p-6">
-        <div className="flex items-start justify-between mb-6">
+      <DialogContent className="flex max-h-[88vh] max-w-md flex-col overflow-hidden p-0">
+        <div className="flex shrink-0 items-start justify-between px-6 pb-4 pt-6">
           <div>
             <p className="font-mono text-[10px] font-semibold tracking-[0.2em] text-ink-300 uppercase">
               Settings
@@ -145,14 +145,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           </DialogClose>
         </div>
 
-        <div className="flex flex-col items-center gap-5">
+        <div className="flex flex-1 flex-col items-center gap-5 overflow-y-auto overscroll-contain scrollbar-hide px-6 pb-5">
           <motion.button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            className={`relative flex size-24 items-center justify-center rounded-full border-2 border-dashed overflow-hidden transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 ${
+            className={`relative flex size-24 shrink-0 items-center justify-center rounded-full border-2 border-dashed overflow-hidden transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 ${
               dragging
                 ? 'border-mint-500 bg-mint-50'
                 : 'border-milk-400 bg-milk-100 hover:border-mint-400 hover:bg-mint-50'
@@ -370,11 +370,18 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               )}
             </div>
           </div>
+        </div>
 
+        {/* Pinned footer — the Save action stays reachable at any scroll
+            position. A short gradient lets the form fade under it rather than
+            ending in a hard cut. */}
+        <div className="relative shrink-0 px-6 pb-6 pt-4">
+          <div className="pointer-events-none absolute inset-x-0 -top-6 h-6 bg-linear-to-t from-card to-transparent" />
+          <div className="absolute inset-x-6 top-0 h-px bg-milk-200/70" />
           <Button
             onClick={handleSave}
             disabled={mutation.isPending}
-            className="mt-2 w-full bg-mint-600 text-white hover:bg-mint-700"
+            className="w-full bg-mint-600 text-white hover:bg-mint-700"
           >
             {mutation.isPending ? 'Saving...' : 'Save'}
           </Button>
