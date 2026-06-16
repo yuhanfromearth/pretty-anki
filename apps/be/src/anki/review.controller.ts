@@ -11,6 +11,7 @@ import {
   AnswerCardDto,
   RescheduleCardDto,
   ReviewSessionDto,
+  QueueCountsDto,
   UndoReviewDto,
 } from '../dtos/review.dto.js';
 
@@ -32,6 +33,17 @@ export class ReviewController {
   @ApiOkResponse({ type: ReviewCardDto })
   getCurrent() {
     return this.anki.getCurrentCard();
+  }
+
+  @Get('queue/:deck')
+  @ApiOperation({
+    summary:
+      "Live composition of a deck's remaining queue (new/learning/review)",
+  })
+  @ApiParam({ name: 'deck', description: 'Deck name' })
+  @ApiOkResponse({ type: QueueCountsDto })
+  queueCounts(@Param('deck') deck: string) {
+    return this.anki.getDeckQueueCounts(deck);
   }
 
   @Post('show-answer')

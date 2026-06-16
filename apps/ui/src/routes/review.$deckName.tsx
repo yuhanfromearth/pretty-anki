@@ -7,6 +7,7 @@ import type {
   ReviewCard as ReviewCardType,
   ReviewPace,
   ReviewSession,
+  QueueCounts,
   UserSettings,
 } from '@nts/shared';
 import {
@@ -81,6 +82,10 @@ function ReviewPage() {
   // in today's queue (short) or graduates them out of it (long).
   const [sessionShort, setSessionShort] = useState(0);
   const [sessionLong, setSessionLong] = useState(0);
+  // Live composition of the remaining queue (new / learning / review), read
+  // from Anki whenever the visible card changes so the progress line's hover
+  // breakdown stays current as cards are worked.
+  const [queueCounts, setQueueCounts] = useState<QueueCounts | null>(null);
   const [flipped, setFlipped] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [medianMs, setMedianMs] = useState<number | undefined>();
@@ -113,6 +118,7 @@ function ReviewPage() {
     },
   });
   const cardTilt = settingsQuery.data?.cardTilt ?? true;
+  const cardTypeBadge = settingsQuery.data?.cardTypeBadge ?? true;
   const soundEffects = settingsQuery.data?.soundEffects ?? true;
   const hasApiKey = settingsQuery.data?.hasApiKey ?? false;
   // When on, the bar spans the whole day: it resumes today's earlier reviews
@@ -171,6 +177,17 @@ function ReviewPage() {
         }
       : null;
 
+  // Re-read the deck's queue composition for the hover breakdown. Fire-and-
+  // forget: it never blocks a card transition, and a failure just leaves the
+  // last good counts in place.
+  const refreshQueueCounts = useCallback(() => {
+    fetchJson<QueueCounts>(
+      `/api/anki/review/queue/${encodeURIComponent(decoded)}`
+    )
+      .then(setQueueCounts)
+      .catch(() => {});
+  }, [decoded]);
+
   const startSession = useCallback(async () => {
     try {
       setPhase('loading');
@@ -184,6 +201,7 @@ function ReviewPage() {
       setSessionShort(0);
       setSessionLong(0);
       setHistory([]);
+      refreshQueueCounts();
       if (pace) setMedianMs(pace.medianMs);
 
       const current = await fetchJson<ReviewCardType | null>(
@@ -200,7 +218,7 @@ function ReviewPage() {
       setErrorMsg(e instanceof Error ? e.message : 'Failed to start review');
       setPhase('error');
     }
-  }, [decoded]);
+  }, [decoded, refreshQueueCounts]);
 
   useEffect(() => {
     startSession();
@@ -231,6 +249,7 @@ function ReviewPage() {
       );
       setDismiss(null);
       dismissing.current = false;
+      refreshQueueCounts();
       if (!next) {
         setPhase('done');
         return;
@@ -243,7 +262,7 @@ function ReviewPage() {
       dismissing.current = false;
       setPhase('done');
     }
-  }, []);
+  }, [refreshQueueCounts]);
 
   const handleAnswer = useCallback(
     (ease: number, buttonIndex: number) => {
@@ -308,13 +327,14 @@ function ReviewPage() {
       // Return on the question side so the card can be re-read before re-rating.
       setFlipped(false);
       setPhase('question');
+      refreshQueueCounts();
     } catch {
       // Undo unavailable (Anki busy / offline) — leave the current card.
     } finally {
       undoingRef.current = false;
       setUndoing(false);
     }
-  }, [card, history, phase, decoded]);
+  }, [card, history, phase, decoded, refreshQueueCounts]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -425,7 +445,12 @@ function ReviewPage() {
 
   return (
     <div className="flex h-full flex-col gap-6">
-      <ReviewProgress reviewed={reviewed} total={total} medianMs={medianMs} />
+      <ReviewProgress
+        reviewed={reviewed}
+        total={total}
+        medianMs={medianMs}
+        queueCounts={queueCounts}
+      />
 
       <div className="mx-auto w-full max-w-2xl pt-4">
         {/* Step back to re-rate the previous card — height reserved so the card
@@ -492,6 +517,8 @@ function ReviewPage() {
           flipped={flipped}
           dismiss={dismiss}
           tilt={cardTilt}
+          cardType={card.cardType}
+          showTypeBadge={cardTypeBadge}
           onFlip={handleFlip}
           fields={card.fields}
           template={template}

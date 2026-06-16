@@ -2,7 +2,11 @@ import { motion, useMotionValue, useSpring } from 'motion/react';
 import { Volume2, Pencil } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { useRef, useCallback, useEffect } from 'react';
-import type { Block, NoteFields } from '@nts/shared';
+import type {
+  Block,
+  NoteFields,
+  ReviewCard as ReviewCardType,
+} from '@nts/shared';
 import {
   TemplateFace,
   useScopedCss,
@@ -35,6 +39,9 @@ interface ReviewCardProps {
   dismiss: CardDismiss | null;
   tilt?: boolean;
   showEdit?: boolean;
+  /** Scheduling state for the corner badge; omit to hide the badge. */
+  cardType?: ReviewCardType['cardType'];
+  showTypeBadge?: boolean;
   onFlip: () => void;
   /** Raw note fields, required to drive `template` rendering. */
   fields?: NoteFields;
@@ -71,6 +78,17 @@ function answerSize(text: string): string {
   if (len > 100) return 'text-lg';
   return 'text-2xl';
 }
+
+// Corner-badge label + dot color per scheduling state, echoing the progress
+// tooltip's buckets (new → sky, learning → terra, review → mint).
+const CARD_TYPE_BADGE: Record<
+  NonNullable<ReviewCardProps['cardType']>,
+  { label: string; dot: string }
+> = {
+  new: { label: 'new', dot: 'bg-sky' },
+  learning: { label: 'learning', dot: 'bg-terra' },
+  review: { label: 'review', dot: 'bg-mint-500' },
+};
 
 const MAX_TILT = 8;
 const SPRING_CONFIG = { stiffness: 300, damping: 25, mass: 0.5 };
@@ -113,6 +131,8 @@ export function ReviewCard({
   dismiss,
   tilt = true,
   showEdit = true,
+  cardType,
+  showTypeBadge = true,
   onFlip,
   fields,
   template,
@@ -192,6 +212,17 @@ export function ReviewCard({
           }}
           transition={{ duration: 0.08 }}
         />
+        {/* Card type badge — stays top-left through flip/tilt */}
+        {showTypeBadge && cardType && (
+          <div className="absolute left-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-full border border-milk-300/80 bg-milk-100/80 py-1 pl-2 pr-2.5">
+            <span
+              className={`size-1.5 rounded-full ${CARD_TYPE_BADGE[cardType].dot}`}
+            />
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wide text-ink-400">
+              {CARD_TYPE_BADGE[cardType].label}
+            </span>
+          </div>
+        )}
         {/* Edit link — stays top-right through flip/tilt */}
         {showEdit && (
           <Link

@@ -13,6 +13,7 @@ import type {
   ReviewCard,
   RawCurrentCard,
   ReviewSession,
+  QueueCounts,
   Note,
   NoteList,
   NoteFields,
@@ -258,6 +259,22 @@ export class AnkiConnectService {
     return { remaining, reviewedToday, dayTotal: reviewedToday + remaining };
   }
 
+  /** Live composition of a deck's remaining queue (new / learning / review),
+   *  read fresh from Anki's per-deck stats so the review screen can show what
+   *  the "to go" count is made of and keep it current as cards are worked. */
+  async getDeckQueueCounts(deckName: string): Promise<QueueCounts> {
+    const stats = await this.invoke<Record<string, AnkiDeckStats>>(
+      'getDeckStats',
+      { decks: [deckName] },
+    );
+    const s = Object.values(stats)[0];
+    return {
+      newCount: s?.new_count ?? 0,
+      learnCount: s?.learn_count ?? 0,
+      reviewCount: s?.review_count ?? 0,
+    };
+  }
+
   /** Number of reviews logged today for a deck — revlog events, so relearning
    *  repeats each count, matching Anki's "studied N cards today". Used to resume
    *  the day's progress bar after a refresh. The day boundary is local midnight;
@@ -278,13 +295,13 @@ export class AnkiConnectService {
       const card = await this.invoke<RawCurrentCard | null>('guiCurrentCard');
       if (!card) return null;
 
-      // guiCurrentCard includes neither the note id nor the card-template index,
-      // so resolve both from cardsInfo. `ord` lets the review screen pick the
-      // direction for reversed note types (ord 0 forward, ord 1 reverse).
-      const [info] = await this.invoke<{ note: number; ord: number }[]>(
-        'cardsInfo',
-        { cards: [card.cardId] },
-      );
+      // guiCurrentCard includes neither the note id, the card-template index,
+      // nor the scheduling state, so resolve them from cardsInfo. `ord` lets the
+      // review screen pick the direction for reversed note types (ord 0 forward,
+      // ord 1 reverse); `type` drives the card's corner badge.
+      const [info] = await this.invoke<
+        { note: number; ord: number; type: number }[]
+      >('cardsInfo', { cards: [card.cardId] });
 
       return formatReviewCard(card, info);
     } catch {

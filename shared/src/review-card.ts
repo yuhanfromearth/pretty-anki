@@ -14,10 +14,28 @@ export interface RawCurrentCard {
 }
 
 /** The slice of `cardsInfo` needed to complete the card — `guiCurrentCard`
- *  reports neither the note id nor the card-template index. */
+ *  reports neither the note id, the card-template index, nor the scheduling
+ *  state. `type` is Anki's card type: 0 new, 1 learning, 2 review,
+ *  3 relearning. */
 export interface CardOrdInfo {
   note: number;
   ord: number;
+  type?: number;
+}
+
+/** Map Anki's numeric card type to the badge's three buckets, folding
+ *  relearning (3) into learning to match Anki's red count. Defaults to
+ *  'review' when the type is unknown. */
+function cardTypeFor(type: number | undefined): ReviewCard['cardType'] {
+  switch (type) {
+    case 0:
+      return 'new';
+    case 1:
+    case 3:
+      return 'learning';
+    default:
+      return 'review';
+  }
 }
 
 /** Build the app's `ReviewCard` from AnkiConnect's raw `guiCurrentCard` output
@@ -29,6 +47,7 @@ export function formatReviewCard(
 ): ReviewCard {
   const noteId = info?.note ?? 0;
   const ord = info?.ord ?? 0;
+  const cardType = cardTypeFor(info?.type);
 
   const fieldEntries = Object.entries(card.fields);
   const allAudio = fieldEntries.flatMap(([, f]) => extractAudio(f.value));
@@ -62,6 +81,7 @@ export function formatReviewCard(
     noteId,
     ord,
     modelName: card.modelName,
+    cardType,
     question,
     answer,
     deckName: card.deckName,

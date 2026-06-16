@@ -12,6 +12,9 @@ export const ReviewCardSchema = z.object({
   // Note type, so the review screen can resolve the app-native Template layout
   // and render it exactly as the builder/manage previews do.
   modelName: z.string(),
+  // The card's scheduling state, for the corner badge on the review card.
+  // Relearning is folded into 'learning' to match Anki's red bucket.
+  cardType: z.enum(['new', 'learning', 'review']),
   question: z.string(),
   answer: z.string(),
   deckName: z.string(),
@@ -49,6 +52,15 @@ export const ReviewSessionSchema = z.object({
   dayTotal: z.number(),
 });
 
+// Live composition of a deck's remaining queue, read from Anki's per-deck
+// stats so the review screen can show what the "to go" count is made of —
+// new, learning, and review cards — and keep it current as cards are worked.
+export const QueueCountsSchema = z.object({
+  newCount: z.number(),
+  learnCount: z.number(),
+  reviewCount: z.number(),
+});
+
 export const UndoReviewSchema = z.object({
   // The card currently shown in the reviewer. The server steps Anki's undo
   // stack back, then reloads the reviewer until the displayed card differs from
@@ -67,4 +79,5 @@ export type ReviewCard = z.infer<typeof ReviewCardSchema>;
 export type AnswerCard = z.infer<typeof AnswerCardSchema>;
 export type RescheduleCard = z.infer<typeof RescheduleCardSchema>;
 export type ReviewSession = z.infer<typeof ReviewSessionSchema>;
+export type QueueCounts = z.infer<typeof QueueCountsSchema>;
 export type UndoReview = z.infer<typeof UndoReviewSchema>;

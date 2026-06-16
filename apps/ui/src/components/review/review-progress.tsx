@@ -1,13 +1,50 @@
+import type { QueueCounts } from '@nts/shared';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '#/components/ui/tooltip';
+
 interface ReviewProgressProps {
   reviewed: number;
   total: number;
   medianMs?: number;
+  // Live composition of the remaining queue, shown on hover so the "to go"
+  // count reveals how much is new vs. learning vs. review.
+  queueCounts?: QueueCounts | null;
 }
+
+const QUEUE_ROWS: {
+  key: keyof QueueCounts;
+  label: string;
+  hint: string;
+  dot: string;
+}[] = [
+  {
+    key: 'newCount',
+    label: 'New',
+    hint: "Cards you haven't studied yet",
+    dot: 'bg-sky',
+  },
+  {
+    key: 'learnCount',
+    label: 'Learning',
+    hint: 'Recently introduced, still in short steps',
+    dot: 'bg-terra',
+  },
+  {
+    key: 'reviewCount',
+    label: 'Review',
+    hint: 'Learned cards due again today',
+    dot: 'bg-mint-500',
+  },
+];
 
 export function ReviewProgress({
   reviewed,
   total,
   medianMs,
+  queueCounts,
 }: ReviewProgressProps) {
   const remaining = Math.max(0, total - reviewed);
 
@@ -62,11 +99,45 @@ export function ReviewProgress({
         </div>
       )}
       <div className="flex items-center justify-between">
-        <p className="text-xs text-ink-500">
-          <span className="font-semibold text-ink-700">{reviewed}</span>{' '}
-          reviewed <span className="text-ink-300">&middot;</span>{' '}
-          <span className="font-semibold text-ink-700">{remaining}</span> to go
-        </p>
+        <Tooltip delay={150}>
+          <TooltipTrigger
+            render={
+              <p className="cursor-default text-xs text-ink-500 underline decoration-ink-100 decoration-dotted underline-offset-4 transition-colors hover:decoration-ink-300" />
+            }
+          >
+            <span className="font-semibold text-ink-700">{reviewed}</span>{' '}
+            reviewed <span className="text-ink-300">&middot;</span>{' '}
+            <span className="font-semibold text-ink-700">{remaining}</span> to
+            go
+          </TooltipTrigger>
+          <TooltipContent className="w-60">
+            <div className="flex flex-col gap-2.5">
+              <p className="font-mono text-[10px] font-medium uppercase tracking-wide text-ink-300">
+                Remaining
+              </p>
+              {QUEUE_ROWS.map(({ key, label, hint, dot }) => (
+                <div key={key} className="flex items-start gap-2">
+                  <span
+                    className={`mt-1 size-2 shrink-0 rounded-full ${dot}`}
+                  />
+                  <div className="flex flex-1 items-center gap-2">
+                    <div className="flex-1">
+                      <span className="text-xs font-medium text-ink-700">
+                        {label}
+                      </span>
+                      <p className="text-[11px] leading-snug text-ink-400">
+                        {hint}
+                      </p>
+                    </div>
+                    <span className="font-mono text-xs font-semibold text-ink-700 tabular-nums">
+                      {queueCounts ? queueCounts[key] : '—'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TooltipContent>
+        </Tooltip>
         {estMinutes !== null && (
           <p className="font-mono text-[11px] font-medium uppercase tracking-wide text-ink-300">
             est. {estMinutes} min

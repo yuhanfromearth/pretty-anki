@@ -43,6 +43,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [cardTilt, setCardTilt] = useState(true);
   const [soundEffects, setSoundEffects] = useState(true);
   const [dailyProgress, setDailyProgress] = useState(true);
+  const [cardTypeBadge, setCardTypeBadge] = useState(true);
   const [aiSystemPrompt, setAiSystemPrompt] = useState('');
   const [aiModel, setAiModel] = useState('');
   // The key is write-only: this input is always blank on open. `removeKey`
@@ -59,6 +60,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       setCardTilt(settings.data.cardTilt ?? true);
       setSoundEffects(settings.data.soundEffects ?? true);
       setDailyProgress(settings.data.dailyProgress ?? true);
+      setCardTypeBadge(settings.data.cardTypeBadge ?? true);
       setAiSystemPrompt(settings.data.aiSystemPrompt ?? '');
       setAiModel(settings.data.aiModel ?? '');
       setApiKeyInput('');
@@ -118,6 +120,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       cardTilt,
       soundEffects,
       dailyProgress,
+      cardTypeBadge,
       aiSystemPrompt: aiSystemPrompt.trim() || null,
       aiModel: aiModel.trim() || null,
       apiKey: apiKeyInput.trim() || undefined,
@@ -254,6 +257,29 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             >
               <span
                 className={`pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform ${dailyProgress ? 'translate-x-4' : 'translate-x-0'}`}
+              />
+            </button>
+          </div>
+
+          <div className="w-full flex items-center justify-between">
+            <div className="flex flex-col gap-0.5">
+              <Label htmlFor="card-type-badge" className="text-ink-600">
+                Card type badge
+              </Label>
+              <span className="text-xs text-ink-300">
+                Show new / learning / review in the card corner
+              </span>
+            </div>
+            <button
+              id="card-type-badge"
+              type="button"
+              role="switch"
+              aria-checked={cardTypeBadge}
+              onClick={() => setCardTypeBadge((v) => !v)}
+              className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 ${cardTypeBadge ? 'bg-mint-500' : 'bg-milk-300'}`}
+            >
+              <span
+                className={`pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform ${cardTypeBadge ? 'translate-x-4' : 'translate-x-0'}`}
               />
             </button>
           </div>
