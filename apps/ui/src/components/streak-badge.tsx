@@ -1,9 +1,11 @@
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 
-// A full-circle rainbow sweep, repeated at the seam so the rotation is seamless.
+// A soft warm sweep with one cool accent, repeated at the seam so the rotation
+// is seamless. Kept muted and low-contrast so the ring reads as a subtle shimmer
+// rather than a full rainbow.
 const RAINBOW =
-  'conic-gradient(from 0deg, #ff5d5d, #ffb14e, #fff35c, #6ee87a, #4ec5ff, #9b6bff, #ff66d4, #ff5d5d)';
+  'conic-gradient(from 0deg, #ffb14e, #ffd98a, #ffe9c2, #b9d4ff, #ffd98a, #ffb14e)';
 
 /**
  * The header streak count. When the user hasn't reviewed today
@@ -37,7 +39,7 @@ export function StreakBadge({
     prevDays.current = days;
     if (!increased || reducedMotion) return;
     setCelebrating(true);
-    const timer = setTimeout(() => setCelebrating(false), 2200);
+    const timer = setTimeout(() => setCelebrating(false), 1100);
     return () => clearTimeout(timer);
   }, [days, reducedMotion]);
 
@@ -52,15 +54,15 @@ export function StreakBadge({
               className="pointer-events-none absolute -inset-[2.5px] rounded-full"
               style={{ background: RAINBOW }}
               initial={{ opacity: 0, rotate: 0, scale: 0.85 }}
-              animate={{ opacity: 1, rotate: 360, scale: 1 }}
+              animate={{ opacity: 0.7, rotate: 360, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{
                 rotate: {
-                  duration: 1.1,
+                  duration: 0.55,
                   ease: 'linear',
                   repeat: Number.POSITIVE_INFINITY,
                 },
-                opacity: { duration: 0.3 },
+                opacity: { duration: 0.2 },
                 scale: { type: 'spring', stiffness: 420, damping: 28 },
               }}
             />
