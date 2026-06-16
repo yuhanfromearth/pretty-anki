@@ -53,14 +53,33 @@ type AnkiReviewTuple = [
   number,
 ];
 
+/** Cap concurrent connections to AnkiConnect. Its stdlib HTTP server has a tiny
+ *  listen backlog and serves on Anki's main thread, so a burst from a fan-out
+ *  (e.g. listing every note type) overflows the backlog and connections get
+ *  dropped — surfacing as ETIMEDOUT even though Anki is running. */
+const MAX_CONCURRENCY = 4;
+
+/** Per-request connection/response timeout. */
+const REQUEST_TIMEOUT_MS = 5000;
+
+/** Retries for transient connection failures (dropped/queued connections). */
+const MAX_RETRIES = 2;
+
 @Injectable()
 export class AnkiConnectService {
   private readonly url: string;
 
+  /** Simple FIFO semaphore: resolved tickets let a waiter proceed. */
+  private active = 0;
+  private readonly waiters: Array<() => void> = [];
+
   constructor(configService: ConfigService) {
+    // Prefer 127.0.0.1 over localhost: localhost also resolves to ::1, but
+    // AnkiConnect binds IPv4 only, so every request would waste an attempt on
+    // a refused IPv6 connection (undici Happy Eyeballs).
     this.url = configService.get<string>(
       'ANKI_CONNECT_URL',
-      'http://localhost:8765',
+      'http://127.0.0.1:8765',
     );
   }
 
@@ -68,18 +87,60 @@ export class AnkiConnectService {
     action: string,
     params: Record<string, unknown> = {},
   ): Promise<T> {
-    const res = await fetch(this.url, {
-      method: 'POST',
-      body: JSON.stringify({ action, version: 6, params }),
-    });
-
-    const json = (await res.json()) as { result: T; error: string | null };
-
-    if (json.error) {
-      throw new Error(`AnkiConnect ${action}: ${json.error}`);
+    await this.acquire();
+    try {
+      return await this.request<T>(action, params);
+    } finally {
+      this.release();
     }
+  }
 
-    return json.result;
+  private async request<T>(
+    action: string,
+    params: Record<string, unknown>,
+  ): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const res = await fetch(this.url, {
+          method: 'POST',
+          body: JSON.stringify({ action, version: 6, params }),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+
+        const json = (await res.json()) as { result: T; error: string | null };
+
+        if (json.error) {
+          throw new Error(`AnkiConnect ${action}: ${json.error}`);
+        }
+
+        return json.result;
+      } catch (err) {
+        // Retry only transient connection problems (dropped/queued by the
+        // backlog or timed out); AnkiConnect-level errors are not retried.
+        if (attempt >= MAX_RETRIES || !isTransientConnectionError(err)) {
+          throw err;
+        }
+        await this.sleep(50 * (attempt + 1));
+      }
+    }
+  }
+
+  private acquire(): Promise<void> {
+    if (this.active < MAX_CONCURRENCY) {
+      this.active++;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      this.waiters.push(() => {
+        this.active++;
+        resolve();
+      });
+    });
+  }
+
+  private release(): void {
+    this.active--;
+    this.waiters.shift()?.();
   }
 
   async getDecks(): Promise<string[]> {
@@ -568,4 +629,31 @@ export class AnkiConnectService {
     });
     return cards.length;
   }
+}
+
+/** Whether an error is a transient connection failure worth retrying — a
+ *  dropped/queued connection (ECONNREFUSED/ETIMEDOUT/ECONNRESET) or an
+ *  AbortSignal timeout — rather than a real AnkiConnect-reported error. */
+function isTransientConnectionError(err: unknown): boolean {
+  if (
+    err != null &&
+    typeof err === 'object' &&
+    (err as { name?: unknown }).name === 'TimeoutError'
+  ) {
+    return true;
+  }
+
+  const codes = new Set(['ECONNREFUSED', 'ETIMEDOUT', 'ECONNRESET']);
+  const seen = new Set<unknown>();
+  const stack: unknown[] = [err];
+  while (stack.length > 0) {
+    const cur = stack.pop();
+    if (cur == null || typeof cur !== 'object' || seen.has(cur)) continue;
+    seen.add(cur);
+    const e = cur as { code?: unknown; cause?: unknown; errors?: unknown };
+    if (typeof e.code === 'string' && codes.has(e.code)) return true;
+    if (e.cause) stack.push(e.cause);
+    if (Array.isArray(e.errors)) stack.push(...e.errors);
+  }
+  return false;
 }
