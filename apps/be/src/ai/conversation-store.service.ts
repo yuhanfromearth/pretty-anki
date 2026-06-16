@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import type {
   AiConversation,
   AiConversationFile,
@@ -59,6 +59,25 @@ export class ConversationStoreService {
       throw new NotFoundException(`Conversation '${id}' not found`);
     }
     return conversation;
+  }
+
+  // Drop a single conversation. Idempotent: a missing id is a no-op and skips
+  // the rewrite, so deleting an already-gone conversation never errors.
+  async deleteOne(noteId: number, id: string): Promise<void> {
+    const file = await this.read(noteId);
+    const next = file.conversations.filter((c) => c.id !== id);
+    if (next.length === file.conversations.length) return;
+    await this.write(noteId, { ...file, conversations: next });
+  }
+
+  // Drop every conversation for a note by removing its file. Idempotent: a
+  // missing file (nothing ever saved) is a no-op.
+  async deleteAll(noteId: number): Promise<void> {
+    try {
+      await unlink(this.fileFor(noteId));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    }
   }
 }
 

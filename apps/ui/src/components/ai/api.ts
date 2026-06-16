@@ -33,6 +33,28 @@ export async function fetchConversation(
   );
 }
 
+// Both deletes return the note's remaining conversation list, so callers can
+// drop it straight into the query cache without a follow-up refetch.
+export async function deleteConversation(
+  noteId: number,
+  id: string
+): Promise<AiConversationList> {
+  return json(
+    await fetch(
+      `/api/ai/conversation?noteId=${noteId}&id=${encodeURIComponent(id)}`,
+      { method: 'DELETE' }
+    )
+  );
+}
+
+export async function deleteAllConversations(
+  noteId: number
+): Promise<AiConversationList> {
+  return json(
+    await fetch(`/api/ai/conversations?noteId=${noteId}`, { method: 'DELETE' })
+  );
+}
+
 export interface ChatPayload {
   noteId: number;
   conversationId?: string;

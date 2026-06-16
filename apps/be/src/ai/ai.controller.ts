@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   ParseIntPipe,
   Post,
@@ -99,5 +100,32 @@ export class AiController {
     @Query('id') id: string,
   ): Promise<AiConversation> {
     return this.store.getOne(noteId, id);
+  }
+
+  @Delete('conversation')
+  @ApiOperation({
+    summary:
+      "Delete a single conversation, returning the note's remaining list",
+  })
+  @ApiQuery({ name: 'noteId', type: Number })
+  @ApiQuery({ name: 'id', type: String })
+  @ApiOkResponse({ type: AiConversationListDto })
+  async remove(
+    @Query('noteId', ParseIntPipe) noteId: number,
+    @Query('id') id: string,
+  ): Promise<AiConversationList> {
+    await this.store.deleteOne(noteId, id);
+    return { conversations: await this.store.list(noteId) };
+  }
+
+  @Delete('conversations')
+  @ApiOperation({ summary: "Delete all of a note's teacher conversations" })
+  @ApiQuery({ name: 'noteId', type: Number })
+  @ApiOkResponse({ type: AiConversationListDto })
+  async removeAll(
+    @Query('noteId', ParseIntPipe) noteId: number,
+  ): Promise<AiConversationList> {
+    await this.store.deleteAll(noteId);
+    return { conversations: [] };
   }
 }

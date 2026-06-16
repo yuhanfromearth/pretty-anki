@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'motion/react';
@@ -11,6 +11,7 @@ import {
   History,
   X,
   MessageSquareText,
+  Trash2,
 } from 'lucide-react';
 import type { AiCardContext, AiMessage } from '@nts/shared';
 import {
@@ -28,6 +29,8 @@ import { Textarea } from '#/components/ui/textarea';
 import {
   conversationKey,
   conversationsKey,
+  deleteAllConversations,
+  deleteConversation,
   fetchConversation,
   fetchConversations,
   streamChat,
@@ -56,6 +59,10 @@ export function TeacherChat({
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Inline delete confirmation: a conversation id armed for deletion, and the
+  // delete-all button armed. Both require a second click to commit.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmingAll, setConfirmingAll] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -213,6 +220,32 @@ export function TeacherChat({
     setSelectedId(id);
   }, []);
 
+  const deleteOneMutation = useMutation({
+    mutationFn: (id: string) => deleteConversation(noteId, id),
+    onSuccess: (data, id) => {
+      queryClient.setQueryData(conversationsKey(noteId), data);
+      queryClient.removeQueries({ queryKey: conversationKey(noteId, id) });
+      setConfirmingId(null);
+      // If the open conversation was the one removed, fall back to the most
+      // recent remaining thread (or a fresh chat when none are left).
+      if (id === selectedId) {
+        const next = data.conversations[0]?.id;
+        if (next) switchTo(next);
+        else startNewChat();
+      }
+    },
+  });
+
+  const deleteAllMutation = useMutation({
+    mutationFn: () => deleteAllConversations(noteId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(conversationsKey(noteId), data);
+      queryClient.removeQueries({ queryKey: ['ai', 'conversation', noteId] });
+      setConfirmingAll(false);
+      startNewChat();
+    },
+  });
+
   const send = useCallback(async () => {
     const text = input.trim();
     if (!text || streaming) return;
@@ -295,7 +328,7 @@ export function TeacherChat({
       <DialogContent
         initialFocus={textareaRef}
         finalFocus={false}
-        className="flex h-[600px] max-h-[85vh] w-full max-w-4xl flex-col gap-0 overflow-hidden p-0"
+        className="flex h-150 max-h-[85vh] w-full max-w-4xl flex-col gap-0 overflow-hidden p-0"
       >
         {/* Header: title, conversation switcher, new chat, close */}
         <div className="flex items-center gap-2 border-b border-milk-200/70 px-4 py-3">
@@ -308,7 +341,17 @@ export function TeacherChat({
 
           <div className="ml-auto flex items-center gap-1">
             {conversations.length > 0 && (
-              <Popover open={historyOpen} onOpenChange={setHistoryOpen}>
+              <Popover
+                open={historyOpen}
+                onOpenChange={(o) => {
+                  setHistoryOpen(o);
+                  // Disarm any pending confirmation when the menu closes.
+                  if (!o) {
+                    setConfirmingId(null);
+                    setConfirmingAll(false);
+                  }
+                }}
+              >
                 <PopoverTrigger
                   className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-ink-400 transition-colors hover:bg-milk-100 hover:text-ink-700"
                   aria-label="Conversation history"
@@ -322,26 +365,81 @@ export function TeacherChat({
                   </p>
                   <div className="max-h-72 overflow-y-auto">
                     {conversations.map((c) => (
-                      <button
+                      <div
                         key={c.id}
-                        type="button"
-                        onClick={() => {
-                          switchTo(c.id);
-                          setHistoryOpen(false);
-                        }}
-                        className={`flex w-full flex-col items-start gap-0.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-milk-100 ${
+                        className={`group/row flex items-center gap-1 rounded-md pr-1 transition-colors hover:bg-milk-100 ${
                           c.id === selectedId ? 'bg-milk-100' : ''
                         }`}
                       >
-                        <span className="font-mono text-[10px] text-ink-300">
-                          {formatRelative(c.updatedAt)}
-                        </span>
-                        <span className="line-clamp-1 text-xs text-ink-700">
-                          {c.snippet || 'New conversation'}
-                        </span>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            switchTo(c.id);
+                            setHistoryOpen(false);
+                          }}
+                          className="flex min-w-0 flex-1 flex-col items-start gap-0.5 px-2.5 py-2 text-left"
+                        >
+                          <span className="font-mono text-[10px] text-ink-300">
+                            {formatRelative(c.updatedAt)}
+                          </span>
+                          <span className="line-clamp-1 w-full text-xs text-ink-700">
+                            {c.snippet || 'New conversation'}
+                          </span>
+                        </button>
+                        {confirmingId === c.id ? (
+                          <button
+                            type="button"
+                            onClick={() => deleteOneMutation.mutate(c.id)}
+                            disabled={deleteOneMutation.isPending}
+                            className="shrink-0 rounded-md bg-terra/15 px-2 py-1 text-[10px] font-semibold text-terra transition-colors hover:bg-terra/25 disabled:opacity-50"
+                            aria-label="Confirm delete conversation"
+                          >
+                            Delete?
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfirmingId(c.id);
+                              setConfirmingAll(false);
+                            }}
+                            className="flex size-7 shrink-0 items-center justify-center rounded-md text-ink-300 opacity-0 transition-all group-hover/row:opacity-100 hover:bg-terra/15 hover:text-terra focus-visible:opacity-100"
+                            aria-label="Delete conversation"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
+                  <div className="mt-1 border-t border-milk-200/70 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirmingAll) deleteAllMutation.mutate();
+                        else {
+                          setConfirmingAll(true);
+                          setConfirmingId(null);
+                        }
+                      }}
+                      disabled={deleteAllMutation.isPending}
+                      className={`flex w-full items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors disabled:opacity-50 ${
+                        confirmingAll
+                          ? 'bg-terra/15 text-terra hover:bg-terra/25'
+                          : 'text-ink-400 hover:bg-milk-100 hover:text-terra'
+                      }`}
+                    >
+                      <Trash2 className="size-3.5" />
+                      {confirmingAll
+                        ? `Delete all ${conversations.length}? Click to confirm`
+                        : 'Delete all conversations'}
+                    </button>
+                  </div>
+                  {(deleteOneMutation.isError || deleteAllMutation.isError) && (
+                    <p className="px-2.5 py-1.5 text-[10px] text-terra">
+                      Couldn’t delete. Please try again.
+                    </p>
+                  )}
                 </PopoverContent>
               </Popover>
             )}
@@ -464,7 +562,7 @@ const MessageBubble = forwardRef<
   if (role === 'user') {
     return (
       <div ref={ref} className="flex justify-end">
-        <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-mint-500 px-3.5 py-2 text-sm text-white dark:text-cocoa-950">
+        <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-mint-500 px-3.5 py-2 text-[0.9375rem] text-white dark:text-cocoa-950">
           {content}
         </div>
       </div>
@@ -477,7 +575,7 @@ const MessageBubble = forwardRef<
       animate={{ opacity: 1, y: 0 }}
       className="max-w-[92%]"
     >
-      <div className="prose prose-sm dark:prose-invert max-w-none rounded-2xl rounded-bl-md bg-milk-100/70 px-3.5 py-2 text-ink-800 prose-p:my-1.5 prose-pre:my-2 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-ol:my-1.5">
+      <div className="prose prose-sm dark:prose-invert max-w-none rounded-2xl rounded-bl-md bg-milk-100/70 px-3.5 py-2 text-lg! text-ink-800 prose-p:my-1.5 prose-pre:my-2 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-ol:my-1.5">
         {content ? (
           <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
         ) : (
