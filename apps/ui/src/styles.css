@@ -17,9 +17,10 @@ body {
 
 @theme inline {
   --font-sans:
-    'Inter Tight', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    'Inter Tight', 'Noto Serif KR', -apple-system, BlinkMacSystemFont,
+    system-ui, sans-serif;
   --font-heading: var(--font-sans);
-  --font-display: 'Fraunces', Georgia, serif;
+  --font-display: 'Fraunces', 'Noto Serif KR', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-korean: 'Noto Serif KR', serif;
 
