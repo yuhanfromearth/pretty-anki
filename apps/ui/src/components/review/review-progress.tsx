@@ -19,24 +19,28 @@ const QUEUE_ROWS: {
   label: string;
   hint: string;
   dot: string;
+  text: string;
 }[] = [
   {
     key: 'newCount',
     label: 'New',
     hint: "Cards you haven't studied yet",
     dot: 'bg-sky',
+    text: 'text-sky',
   },
   {
     key: 'learnCount',
     label: 'Learning',
     hint: 'Recently introduced, still in short steps',
     dot: 'bg-terra',
+    text: 'text-terra',
   },
   {
     key: 'reviewCount',
     label: 'Review',
     hint: 'Learned cards due again today',
     dot: 'bg-mint-500',
+    text: 'text-mint-500',
   },
 ];
 
@@ -115,7 +119,7 @@ export function ReviewProgress({
               <p className="font-mono text-[10px] font-medium uppercase tracking-wide text-ink-300">
                 Remaining
               </p>
-              {QUEUE_ROWS.map(({ key, label, hint, dot }) => (
+              {QUEUE_ROWS.map(({ key, label, hint, dot, text }) => (
                 <div key={key} className="flex items-start gap-2">
                   <span
                     className={`mt-1 size-2 shrink-0 rounded-full ${dot}`}
@@ -129,7 +133,9 @@ export function ReviewProgress({
                         {hint}
                       </p>
                     </div>
-                    <span className="font-mono text-xs font-semibold text-ink-700 tabular-nums">
+                    <span
+                      className={`font-mono text-xs font-semibold tabular-nums ${text}`}
+                    >
                       {queueCounts ? queueCounts[key] : '—'}
                     </span>
                   </div>
