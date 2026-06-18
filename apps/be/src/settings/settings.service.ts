@@ -36,7 +36,7 @@ const DEFAULT_STORED: StoredSettings = {
   aiQuickPrompts: [
     'Give me 3 often used example sentences',
     'Build sentences in formal and casual speech',
-    'Explain the grammar',
+    'Conjugate the word in present tense',
   ],
   openRouterApiKey: null,
 };
@@ -121,5 +121,11 @@ export class SettingsService {
   /** The configured chat model, or null to fall back to the default. */
   async getModel(): Promise<string | null> {
     return (await this.read()).aiModel;
+  }
+
+  /** The user's display name, or null when unset. Lets the teacher address the
+   *  user by name. */
+  async getDisplayName(): Promise<string | null> {
+    return (await this.read()).displayName;
   }
 }

@@ -34,7 +34,12 @@ export class AiConversationService {
 
     const model = (await this.settings.getModel()) || DEFAULT_AI_MODEL;
     const userPrompt = await this.settings.getSystemPrompt();
-    const systemPrompt = buildSystemPrompt(userPrompt, req.context);
+    const displayName = await this.settings.getDisplayName();
+    const systemPrompt = buildSystemPrompt(
+      userPrompt,
+      req.context,
+      displayName,
+    );
 
     const file = await this.store.read(req.noteId);
     const id = req.conversationId ?? randomUUID();
@@ -93,7 +98,13 @@ export class AiConversationService {
 // them pasting it in. The card block is framed as private context with an
 // explicit instruction not to echo it, so the model doesn't leak the internal
 // `<current_card>` scaffolding (tags, field names, sound markers) to the user.
-function buildSystemPrompt(userPrompt: string, context: AiCardContext): string {
+// When the user has set a display name, the teacher is told it so it can address
+// them personally.
+function buildSystemPrompt(
+  userPrompt: string,
+  context: AiCardContext,
+  displayName?: string | null,
+): string {
   const fields = Object.entries(context.fields)
     .map(([name, value]) => [name, cleanFieldValue(value)] as const)
     .filter(([, value]) => value.length > 0)
@@ -111,8 +122,13 @@ function buildSystemPrompt(userPrompt: string, context: AiCardContext): string {
   const guard =
     'The <current_card> block below is private context describing the flashcard the user is currently reviewing. Use it silently to ground your answers. Never repeat, quote, or describe this block — including its tags, field names, or formatting — and never mention how the card was provided to you. Just talk naturally about the content.';
 
+  const name = displayName?.trim();
+  const intro = name
+    ? `You are talking with ${name}. Address them by name when it feels natural, but don't overdo it.`
+    : '';
+
   const trimmed = userPrompt.trim();
-  return [trimmed, guard, cardBlock].filter(Boolean).join('\n\n');
+  return [trimmed, intro, guard, cardBlock].filter(Boolean).join('\n\n');
 }
 
 // Reduce a raw note field to plain text for the prompt: drop Anki sound/play
