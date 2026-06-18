@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Camera, X, Sparkles } from 'lucide-react';
+import { Camera, X, Sparkles, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { UserSettings, UserSettingsUpdate } from '@nts/shared';
 import { DEFAULT_AI_MODEL } from '@nts/shared';
@@ -47,6 +47,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [cardTypeBadge, setCardTypeBadge] = useState(true);
   const [aiSystemPrompt, setAiSystemPrompt] = useState('');
   const [aiModel, setAiModel] = useState('');
+  const [quickPrompts, setQuickPrompts] = useState<string[]>([]);
   // The key is write-only: this input is always blank on open. `removeKey`
   // stages clearing a previously-saved key on save.
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -64,6 +65,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       setCardTypeBadge(settings.data.cardTypeBadge ?? true);
       setAiSystemPrompt(settings.data.aiSystemPrompt ?? '');
       setAiModel(settings.data.aiModel ?? '');
+      setQuickPrompts(settings.data.aiQuickPrompts ?? []);
       setApiKeyInput('');
       setRemoveKey(false);
     }
@@ -124,6 +126,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       cardTypeBadge,
       aiSystemPrompt: aiSystemPrompt.trim() || null,
       aiModel: aiModel.trim() || null,
+      aiQuickPrompts: quickPrompts.map((p) => p.trim()).filter(Boolean),
       apiKey: apiKeyInput.trim() || undefined,
       removeApiKey: removeKey || undefined,
     });
@@ -306,6 +309,49 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 placeholder="Act as a patient Korean language teacher for absolute beginners. Your name is 전정국."
                 className="min-h-24"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-ink-600">Quick prompts</Label>
+              <span className="block text-xs text-ink-300">
+                One-tap prompts shown above the teacher composer on a new chat
+              </span>
+              <div className="space-y-1.5 pt-0.5">
+                {quickPrompts.map((prompt, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <Input
+                      value={prompt}
+                      onChange={(e) =>
+                        setQuickPrompts((prev) =>
+                          prev.map((p, j) => (j === i ? e.target.value : p))
+                        )
+                      }
+                      placeholder="Give me 3 example sentences"
+                      className="flex-1 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQuickPrompts((prev) =>
+                          prev.filter((_, j) => j !== i)
+                        )
+                      }
+                      className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-300 transition-colors hover:bg-terra/15 hover:text-terra"
+                      aria-label="Remove prompt"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setQuickPrompts((prev) => [...prev, ''])}
+                  className="flex items-center gap-1.5 rounded-lg px-1 py-1 text-xs font-medium text-mint-700 transition-colors hover:text-mint-800 dark:text-mint-500"
+                >
+                  <Plus className="size-3.5" />
+                  Add prompt
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1.5">

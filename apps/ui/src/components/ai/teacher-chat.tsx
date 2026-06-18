@@ -13,7 +13,7 @@ import {
   MessageSquareText,
   Trash2,
 } from 'lucide-react';
-import type { AiCardContext, AiMessage } from '@nts/shared';
+import type { AiCardContext, AiMessage, UserSettings } from '@nts/shared';
 import {
   Dialog,
   DialogContent,
@@ -93,17 +93,28 @@ export function TeacherChat({
     refetchOnWindowFocus: false,
   });
 
-  // On each open, default to the most-recent conversation (or a fresh chat when
-  // the note has none). Reset the guard when the dialog closes.
+  // User-configured quick prompts, shown as one-tap chips on a fresh chat.
+  const settingsQuery = useQuery<UserSettings>({
+    queryKey: ['user-settings'],
+    queryFn: async () => {
+      const r = await fetch('/api/settings');
+      if (!r.ok) throw new Error(`settings: ${r.status}`);
+      return r.json() as Promise<UserSettings>;
+    },
+  });
+  const quickPrompts = settingsQuery.data?.aiQuickPrompts ?? [];
+
+  // On each open, start a fresh chat. Past conversations remain reachable
+  // through the History popover. Reset the guard when the dialog closes.
   useEffect(() => {
     if (!open) {
       initializedRef.current = false;
       return;
     }
-    if (initializedRef.current || !listQuery.data) return;
+    if (initializedRef.current) return;
     initializedRef.current = true;
-    setSelectedId(listQuery.data.conversations[0]?.id ?? null);
-  }, [open, listQuery.data]);
+    setSelectedId(null);
+  }, [open]);
 
   // Mirror the selected conversation's persisted messages into local state. The
   // guard against streaming is implicit: we never change selectedId/detail data
@@ -246,65 +257,73 @@ export function TeacherChat({
     },
   });
 
-  const send = useCallback(async () => {
-    const text = input.trim();
-    if (!text || streaming) return;
+  // `override` lets a quick-prompt button send its own text without touching
+  // the composer draft; a normal send reads (and clears) the composer.
+  const send = useCallback(
+    async (override?: string) => {
+      const fromComposer = override === undefined;
+      const text = (override ?? input).trim();
+      if (!text || streaming) return;
 
-    const base = messages;
-    const userMsg: AiMessage = { role: 'user', content: text };
-    setInput('');
-    setError(null);
-    setMessages([...base, userMsg]);
-    setStreamingText('');
+      const base = messages;
+      const userMsg: AiMessage = { role: 'user', content: text };
+      if (fromComposer) setInput('');
+      setError(null);
+      setMessages([...base, userMsg]);
+      setStreamingText('');
 
-    const controller = new AbortController();
-    abortRef.current = controller;
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-    let acc = '';
-    let convId = selectedId ?? undefined;
-    let failed = false;
+      let acc = '';
+      let convId = selectedId ?? undefined;
+      let failed = false;
 
-    for await (const evt of streamChat(
-      {
-        noteId,
-        conversationId: selectedId ?? undefined,
-        message: text,
-        context,
-      },
-      controller.signal
-    )) {
-      if (evt.type === 'meta') convId = evt.conversationId;
-      else if (evt.type === 'delta') {
-        acc += evt.content;
-        setStreamingText(acc);
-      } else if (evt.type === 'error') {
-        setError(evt.message);
-        failed = true;
-        break;
-      } else if (evt.type === 'done') break;
-    }
+      for await (const evt of streamChat(
+        {
+          noteId,
+          conversationId: selectedId ?? undefined,
+          message: text,
+          context,
+        },
+        controller.signal
+      )) {
+        if (evt.type === 'meta') convId = evt.conversationId;
+        else if (evt.type === 'delta') {
+          acc += evt.content;
+          setStreamingText(acc);
+        } else if (evt.type === 'error') {
+          setError(evt.message);
+          failed = true;
+          break;
+        } else if (evt.type === 'done') break;
+      }
 
-    abortRef.current = null;
+      abortRef.current = null;
 
-    // Discard the partial turn on abort or error: restore the pre-send view and
-    // return the question to the composer so it can be retried.
-    if (controller.signal.aborted || failed) {
+      // Discard the partial turn on abort or error: restore the pre-send view and
+      // return the question to the composer so it can be retried.
+      if (controller.signal.aborted || failed) {
+        setStreamingText(null);
+        setMessages(base);
+        // Only return the text to the composer for a composer-originated send;
+        // a quick-prompt send must leave any existing draft intact.
+        if (failed && fromComposer) setInput(text);
+        return;
+      }
+
+      setMessages([...base, userMsg, { role: 'assistant', content: acc }]);
       setStreamingText(null);
-      setMessages(base);
-      if (failed) setInput(text);
-      return;
-    }
-
-    setMessages([...base, userMsg, { role: 'assistant', content: acc }]);
-    setStreamingText(null);
-    if (convId) setSelectedId(convId);
-    queryClient.invalidateQueries({ queryKey: conversationsKey(noteId) });
-    if (convId) {
-      queryClient.invalidateQueries({
-        queryKey: conversationKey(noteId, convId),
-      });
-    }
-  }, [input, streaming, messages, selectedId, noteId, context, queryClient]);
+      if (convId) setSelectedId(convId);
+      queryClient.invalidateQueries({ queryKey: conversationsKey(noteId) });
+      if (convId) {
+        queryClient.invalidateQueries({
+          queryKey: conversationKey(noteId, convId),
+        });
+      }
+    },
+    [input, streaming, messages, selectedId, noteId, context, queryClient]
+  );
 
   const onComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -353,7 +372,7 @@ export function TeacherChat({
                 }}
               >
                 <PopoverTrigger
-                  className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-ink-400 transition-colors hover:bg-milk-100 hover:text-ink-700"
+                  className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-ink-400 transition-colors hover:bg-mint-500/10 hover:text-mint-700 dark:hover:text-mint-500"
                   aria-label="Conversation history"
                 >
                   <History className="size-3.5" />
@@ -446,7 +465,7 @@ export function TeacherChat({
             <button
               type="button"
               onClick={startNewChat}
-              className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-ink-400 transition-colors hover:bg-milk-100 hover:text-ink-700"
+              className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-ink-400 transition-colors hover:bg-mint-500/10 hover:text-mint-700 dark:hover:text-mint-500"
               aria-label="New chat"
             >
               <Plus className="size-3.5" />
@@ -518,6 +537,21 @@ export function TeacherChat({
 
         {/* Composer */}
         <div className="border-t border-milk-200/70 p-3">
+          {/* Quick prompts — one-tap, send immediately. Only on a fresh chat. */}
+          {empty && quickPrompts.length > 0 && (
+            <div className="mb-2 flex flex-wrap justify-center gap-8">
+              {quickPrompts.map((prompt, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => void send(prompt)}
+                  className="rounded-full bg-milk-50/60 px-3 py-1.5 text-left text-xs font-medium text-ink-600 transition-colors hover:bg-mint-500/10 hover:text-mint-700 dark:hover:text-mint-500"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-end gap-2 rounded-2xl border border-milk-200 bg-milk-50/60 px-2 py-1.5 transition-colors focus-within:border-mint-400/60">
             <Textarea
               ref={textareaRef}

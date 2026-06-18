@@ -12,6 +12,8 @@ export const UserSettingsSchema = z.object({
   cardTypeBadge: z.boolean().optional(),
   aiSystemPrompt: z.string().nullable(),
   aiModel: z.string().nullable(),
+  // One-click prompts shown above the teacher composer on a fresh chat.
+  aiQuickPrompts: z.array(z.string()),
   hasApiKey: z.boolean(),
 });
 
@@ -26,6 +28,7 @@ export const UserSettingsUpdateSchema = z.object({
   cardTypeBadge: z.boolean().optional(),
   aiSystemPrompt: z.string().nullable(),
   aiModel: z.string().nullable(),
+  aiQuickPrompts: z.array(z.string()),
   apiKey: z.string().optional(),
   removeApiKey: z.boolean().optional(),
 });

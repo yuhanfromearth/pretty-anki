@@ -20,6 +20,7 @@ interface StoredSettings {
   cardTypeBadge?: boolean;
   aiSystemPrompt: string | null;
   aiModel: string | null;
+  aiQuickPrompts?: string[];
   openRouterApiKey: string | null;
 }
 
@@ -32,6 +33,11 @@ const DEFAULT_STORED: StoredSettings = {
   cardTypeBadge: true,
   aiSystemPrompt: null,
   aiModel: null,
+  aiQuickPrompts: [
+    'Give me 3 often used example sentences',
+    'Build sentences in formal and casual speech',
+    'Explain the grammar',
+  ],
   openRouterApiKey: null,
 };
 
@@ -62,6 +68,7 @@ export class SettingsService {
       cardTypeBadge: stored.cardTypeBadge,
       aiSystemPrompt: stored.aiSystemPrompt,
       aiModel: stored.aiModel,
+      aiQuickPrompts: stored.aiQuickPrompts ?? [],
       hasApiKey: !!stored.openRouterApiKey,
     };
   }
@@ -91,6 +98,10 @@ export class SettingsService {
       cardTypeBadge: update.cardTypeBadge,
       aiSystemPrompt: update.aiSystemPrompt,
       aiModel: update.aiModel,
+      // Drop blank rows the editor may submit.
+      aiQuickPrompts: update.aiQuickPrompts
+        .map((p) => p.trim())
+        .filter(Boolean),
       openRouterApiKey,
     };
     await this.write(next);
