@@ -146,7 +146,14 @@ function ManagePage() {
               onSelect={(note) =>
                 guard(() => setSelection({ mode: 'edit', note }))
               }
-              onAdd={() => guard(() => setSelection({ mode: 'add' }))}
+              onAdd={() =>
+                guard(() => {
+                  if (selection?.mode === 'edit') {
+                    handleModelChange(selection.note.modelName);
+                  }
+                  setSelection({ mode: 'add' });
+                })
+              }
               isFetching={notesQuery.isFetching}
               truncated={notesQuery.data?.truncated ?? false}
             />
