@@ -539,6 +539,7 @@ function ReviewPage() {
         open={chatOpen}
         onOpenChange={setChatOpen}
         noteId={card.noteId}
+        deckName={decoded}
         context={{ modelName: card.modelName, fields: card.fields }}
       />
     </div>

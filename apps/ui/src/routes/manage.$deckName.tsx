@@ -14,10 +14,17 @@ import { NoteList } from '#/components/manage/note-list';
 import { NoteEditPanel, AddNotePanel } from '#/components/manage/note-detail';
 import { fetchNotes, fetchModels, notesKey } from '#/components/manage/api';
 
+type ManageSearch = { noteId?: number; add?: boolean; model?: string };
+
 export const Route = createFileRoute('/manage/$deckName')({
-  validateSearch: (search: Record<string, unknown>): { noteId?: number } => {
+  validateSearch: (search: Record<string, unknown>): ManageSearch => {
+    const out: ManageSearch = {};
     const n = Number(search.noteId);
-    return Number.isFinite(n) && n > 0 ? { noteId: n } : {};
+    if (Number.isFinite(n) && n > 0) out.noteId = n;
+    if (search.add === true || search.add === 'true') out.add = true;
+    if (typeof search.model === 'string' && search.model)
+      out.model = search.model;
+    return out;
   },
   component: ManagePage,
 });
@@ -28,7 +35,11 @@ const LAST_MODEL_KEY = 'manage:last-model';
 
 function ManagePage() {
   const { deckName } = Route.useParams();
-  const { noteId: targetNoteId } = Route.useSearch();
+  const {
+    noteId: targetNoteId,
+    add: wantAdd,
+    model: wantModel,
+  } = Route.useSearch();
   const decoded = decodeURIComponent(deckName);
 
   const [search, setSearch] = useState('');
@@ -53,7 +64,9 @@ function ManagePage() {
   const notes = notesQuery.data?.notes ?? [];
 
   const [selection, setSelection] = useState<Selection>(null);
-  const [modelName, setModelName] = useState('');
+  // Seed from the `model` search param (e.g. arriving from the review screen's
+  // "Add card" button, which preselects the current card's note type).
+  const [modelName, setModelName] = useState(wantModel ?? '');
 
   // Dirty-switch guard: a pending navigation is parked until the user confirms
   // discarding unsaved edits.
@@ -87,15 +100,23 @@ function ManagePage() {
   // typing in search) never unmounts the editor and discards unsaved edits.
   const didAutoSelect = useRef(false);
   useEffect(() => {
-    if (didAutoSelect.current || selection !== null || notes.length === 0)
+    if (didAutoSelect.current || selection !== null) return;
+    // Arriving with `?add` (e.g. from the review screen's "Add card" button)
+    // opens the add panel straight away, regardless of whether the deck has
+    // notes yet.
+    if (wantAdd) {
+      didAutoSelect.current = true;
+      setSelection({ mode: 'add' });
       return;
+    }
+    if (notes.length === 0) return;
     didAutoSelect.current = true;
     const target =
       targetNoteId != null
         ? notes.find((n) => n.noteId === targetNoteId)
         : undefined;
     setSelection({ mode: 'edit', note: target ?? notes[0] });
-  }, [selection, notes, targetNoteId]);
+  }, [selection, notes, targetNoteId, wantAdd]);
 
   const handleModelChange = (name: string) => {
     setModelName(name);

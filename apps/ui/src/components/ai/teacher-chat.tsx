@@ -1,11 +1,13 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Sparkles,
   Plus,
+  FilePlus,
   ArrowUp,
   Square,
   History,
@@ -40,6 +42,7 @@ interface TeacherChatProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   noteId: number;
+  deckName: string;
   context: AiCardContext;
 }
 
@@ -47,6 +50,7 @@ export function TeacherChat({
   open,
   onOpenChange,
   noteId,
+  deckName,
   context,
 }: TeacherChatProps) {
   const queryClient = useQueryClient();
@@ -462,6 +466,19 @@ export function TeacherChat({
                 </PopoverContent>
               </Popover>
             )}
+            {/* Jump to the manage page's add panel with this card's note type
+                preselected, so the teacher's suggestions can become a new card. */}
+            <Link
+              to="/manage/$deckName"
+              params={{ deckName }}
+              search={{ add: true, model: context.modelName }}
+              onClick={() => onOpenChange(false)}
+              className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-ink-400 transition-colors hover:bg-mint-500/10 hover:text-mint-700 dark:hover:text-mint-500"
+              aria-label="Add card to this deck"
+            >
+              <FilePlus className="size-3.5" />
+              Add card
+            </Link>
             <button
               type="button"
               onClick={startNewChat}
