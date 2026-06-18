@@ -1,6 +1,10 @@
 import { extractAudio, stripHtml } from './card-html.js';
 import type { ReviewCard } from './review.js';
 
+/** Anki inserts this between the front and back of a rendered answer. Matches
+ *  the quoted/unquoted and self-closing variants. */
+const ANSWER_SEPARATOR = /<hr id=?["']?answer["']?\s*\/?>/i;
+
 /** The raw card payload AnkiConnect's `guiCurrentCard` returns. */
 export interface RawCurrentCard {
   cardId: number;
@@ -62,9 +66,16 @@ export function formatReviewCard(
   // card's own template. The answer HTML repeats the front followed by
   // `<hr id=answer>`, so keep only the back half.
   const question = stripHtml(card.question);
-  const answerBack =
-    card.answer.split(/<hr id=?["']?answer["']?\s*\/?>/i)[1] ?? card.answer;
-  const answer = stripHtml(answerBack);
+  const parts = card.answer.split(ANSWER_SEPARATOR);
+  let answer = stripHtml(parts[1] ?? card.answer);
+  // Some note types use a back template without Anki's standard `<hr id=answer>`
+  // separator, so the split fails and we fall back to the whole answer — which
+  // still contains the rendered front. The review card's back face renders the
+  // question on top already, so strip a duplicated front prefix to avoid showing
+  // the prompt twice.
+  if (parts.length === 1 && question && answer.startsWith(question)) {
+    answer = answer.slice(question.length).replace(/^(?:<br>)+/, '');
+  }
 
   // Only attribute audio to the front when the rendered question side actually
   // references it — Anki marks sounds with `[anki:play:q:N]` (question) /

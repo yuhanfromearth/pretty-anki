@@ -45,6 +45,20 @@ describe('formatReviewCard', () => {
     expect(card.answer).toBe('No separator here');
   });
 
+  it('strips a duplicated front prefix when the back template lacks a separator', () => {
+    // A back template without `<hr id=answer>` renders front + back together; the
+    // back face already shows the question, so the front must not be duplicated.
+    const card = formatReviewCard(
+      rawCard({
+        question: 'english',
+        answer: 'english<div>한국어</div>',
+      }),
+      { note: 1, ord: 1 },
+    );
+    expect(card.question).toBe('english');
+    expect(card.answer).toBe('한국어');
+  });
+
   it('extracts audio and withholds front audio that the front does not reference', () => {
     const card = formatReviewCard(
       rawCard({
