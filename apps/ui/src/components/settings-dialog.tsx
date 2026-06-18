@@ -15,6 +15,7 @@ import { Textarea } from '#/components/ui/textarea';
 import { Button } from '#/components/ui/button';
 import { Label } from '#/components/ui/label';
 import { Separator } from '#/components/ui/separator';
+import { ModelPicker } from '#/components/model-picker';
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const ACCEPT_STRING = '.png,.jpg,.jpeg,.webp,.gif';
@@ -308,15 +309,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ai-model" className="text-ink-600">
-                Model
-              </Label>
-              <Input
-                id="ai-model"
+              <Label className="text-ink-600">Model</Label>
+              <ModelPicker
                 value={aiModel}
-                onChange={(e) => setAiModel(e.target.value)}
+                onChange={setAiModel}
                 placeholder={DEFAULT_AI_MODEL}
-                className="font-mono text-xs"
               />
             </div>
 

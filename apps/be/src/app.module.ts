@@ -8,6 +8,8 @@ import { ReviewController } from './anki/review.controller.js';
 import { AnkiConnectService } from './anki/anki-connect.service.js';
 import { SettingsController } from './settings/settings.controller.js';
 import { SettingsService } from './settings/settings.service.js';
+import { ModelsController } from './models/models.controller.js';
+import { ModelsService } from './models/models.service.js';
 import { TemplatesController } from './templates/templates.controller.js';
 import { TemplatesService } from './templates/templates.service.js';
 import { AiController } from './ai/ai.controller.js';
@@ -42,11 +44,13 @@ const clientRoot = join(
     SettingsController,
     TemplatesController,
     AiController,
+    ModelsController,
   ],
   providers: [
     AppService,
     AnkiConnectService,
     SettingsService,
+    ModelsService,
     TemplatesService,
     AiConversationService,
     ConversationStoreService,
