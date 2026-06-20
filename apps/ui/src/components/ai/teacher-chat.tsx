@@ -763,7 +763,7 @@ export function TeacherChat({
           <div className="flex flex-col gap-1.5 rounded-2xl border border-milk-200 bg-milk-50/60 px-2 py-1.5 transition-colors focus-within:border-mint-400/60">
             {/* Active quote pill — click the text to flash its source, ✕ to clear. */}
             {quote !== null && (
-              <div className="flex items-center gap-1.5 rounded-lg bg-milk-100/80 py-1 pr-1 pl-1.5">
+              <div className="flex items-center gap-1.5 rounded-lg bg-milk-100/80">
                 <button
                   type="button"
                   onClick={highlightSource}
@@ -878,7 +878,7 @@ const MessageBubble = memo(
               <button
                 type="button"
                 onClick={() => onQuoteClick?.(quote)}
-                className="flex gap-2 rounded-lg bg-black/10 py-1 pr-2 pl-1.5 text-left transition-colors hover:bg-black/20 dark:bg-black/10 dark:hover:bg-black/20"
+                className="flex gap-2 rounded-lg bg-black/10 py-1 pr-2.5 pl-2.5 text-left transition-colors hover:bg-black/20 dark:bg-black/10 dark:hover:bg-black/20"
                 aria-label="Jump to quoted text"
               >
                 <span className="w-0.5 shrink-0 self-stretch rounded-full bg-white/50 dark:bg-cocoa-950/40" />

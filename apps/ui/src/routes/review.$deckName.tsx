@@ -177,6 +177,17 @@ function ReviewPage() {
         }
       : null;
 
+  // The card data arrives before the per-type template does, so painting it
+  // right away shows the big question/answer scaffold for a beat and then snaps
+  // to the (smaller) custom layout once `detailQuery` resolves — the size flicker
+  // when opening a card. Hold the loading state until the render mode is settled:
+  // wait for the templates list, and — when this type is customized — its layout,
+  // so the first paint is already the final render. A failed query drops out of
+  // `isPending` and falls back to the scaffold rather than hanging. Cards sharing
+  // a model reuse the cached layout, so only the first card of each type waits.
+  const templatePending =
+    templatesQuery.isPending || (useTemplate && detailQuery.isPending);
+
   // Re-read the deck's queue composition for the hover breakdown. Fire-and-
   // forget: it never blocks a card transition, and a failure just leaves the
   // last good counts in place.
@@ -434,7 +445,7 @@ function ReviewPage() {
     );
   }
 
-  if (phase === 'loading' || !card) {
+  if (phase === 'loading' || !card || templatePending) {
     return (
       <div className="flex items-center gap-3 py-24 justify-center text-ink-300 text-sm">
         <span className="size-4 rounded-full border-2 border-ink-100 border-t-mint-500 animate-spin" />
