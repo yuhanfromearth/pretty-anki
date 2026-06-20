@@ -1,4 +1,11 @@
-import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -850,60 +857,62 @@ export function TeacherChat({
   );
 }
 
-const MessageBubble = forwardRef<
-  HTMLDivElement,
-  {
-    role: AiMessage['role'];
-    content: string;
-    quotable?: boolean;
-    onQuoteClick?: (text: string) => void;
-  }
->(function MessageBubble({ role, content, quotable, onQuoteClick }, ref) {
-  if (role === 'user') {
-    // A composed reply arrives as a leading markdown blockquote; render it as a
-    // styled quote block rather than literal "> …" lines.
-    const { quote, body } = parseUserMessage(content);
-    return (
-      <div ref={ref} className="flex justify-end">
-        <div className="flex max-w-[85%] flex-col gap-1.5 rounded-2xl rounded-br-md bg-mint-700 px-3.5 py-2 text-[0.9375rem] text-white dark:bg-mint-800 dark:text-cocoa-950">
-          {quote !== null && (
-            <button
-              type="button"
-              onClick={() => onQuoteClick?.(quote)}
-              className="flex gap-2 rounded-lg bg-black/10 py-1 pr-2 pl-1.5 text-left transition-colors hover:bg-black/20 dark:bg-black/10 dark:hover:bg-black/20"
-              aria-label="Jump to quoted text"
-            >
-              <span className="w-0.5 shrink-0 self-stretch rounded-full bg-white/50 dark:bg-cocoa-950/40" />
-              <span className="line-clamp-3 text-[0.8125rem] whitespace-pre-wrap italic opacity-80">
-                {quote}
-              </span>
-            </button>
-          )}
-          {body && <span className="whitespace-pre-wrap">{body}</span>}
+const MessageBubble = memo(
+  forwardRef<
+    HTMLDivElement,
+    {
+      role: AiMessage['role'];
+      content: string;
+      quotable?: boolean;
+      onQuoteClick?: (text: string) => void;
+    }
+  >(function MessageBubble({ role, content, quotable, onQuoteClick }, ref) {
+    if (role === 'user') {
+      // A composed reply arrives as a leading markdown blockquote; render it as a
+      // styled quote block rather than literal "> …" lines.
+      const { quote, body } = parseUserMessage(content);
+      return (
+        <div ref={ref} className="flex justify-end">
+          <div className="flex max-w-[85%] flex-col gap-1.5 rounded-2xl rounded-br-md bg-mint-700 px-3.5 py-2 text-[0.9375rem] text-white dark:bg-mint-800 dark:text-cocoa-950">
+            {quote !== null && (
+              <button
+                type="button"
+                onClick={() => onQuoteClick?.(quote)}
+                className="flex gap-2 rounded-lg bg-black/10 py-1 pr-2 pl-1.5 text-left transition-colors hover:bg-black/20 dark:bg-black/10 dark:hover:bg-black/20"
+                aria-label="Jump to quoted text"
+              >
+                <span className="w-0.5 shrink-0 self-stretch rounded-full bg-white/50 dark:bg-cocoa-950/40" />
+                <span className="line-clamp-3 text-[0.8125rem] whitespace-pre-wrap italic opacity-80">
+                  {quote}
+                </span>
+              </button>
+            )}
+            {body && <span className="whitespace-pre-wrap">{body}</span>}
+          </div>
         </div>
-      </div>
-    );
-  }
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-[92%]"
-    >
-      <div
-        data-assistant-msg={quotable ? '' : undefined}
-        className="prose prose-sm dark:prose-invert max-w-none rounded-2xl rounded-bl-md bg-milk-100/70 px-3.5 py-2 text-lg! text-ink-800 prose-p:my-1.5 prose-pre:my-2 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-ol:my-1.5"
+      );
+    }
+    return (
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-[92%]"
       >
-        {content ? (
-          <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
-        ) : (
-          <TypingDots />
-        )}
-      </div>
-    </motion.div>
-  );
-});
+        <div
+          data-assistant-msg={quotable ? '' : undefined}
+          className="prose prose-sm dark:prose-invert max-w-none rounded-2xl rounded-bl-md bg-milk-100/70 px-3.5 py-2 text-lg! text-ink-800 prose-p:my-1.5 prose-pre:my-2 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-ol:my-1.5"
+        >
+          {content ? (
+            <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+          ) : (
+            <TypingDots />
+          )}
+        </div>
+      </motion.div>
+    );
+  })
+);
 
 function TypingDots() {
   return (
