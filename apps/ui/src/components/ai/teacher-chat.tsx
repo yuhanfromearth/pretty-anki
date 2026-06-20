@@ -303,11 +303,9 @@ export function TeacherChat({
     quoteRangeRef.current = null;
   }, []);
 
-  // Scroll the quoted text back into view and briefly flash it. Prefer the CSS
-  // Custom Highlight API (exact substring); fall back to flashing the bubble.
-  const highlightSource = useCallback(() => {
-    const range = quoteRangeRef.current;
-    if (!range) return;
+  // Scroll a range into view and briefly flash it. Prefer the CSS Custom
+  // Highlight API (exact substring); fall back to flashing the source bubble.
+  const flashRange = useCallback((range: Range) => {
     const container = scrollRef.current;
     const rect = range.getBoundingClientRect();
     if (container && rect.height) {
@@ -333,14 +331,35 @@ export function TeacherChat({
       return;
     }
     const bubble = closestAssistant(range.commonAncestorContainer);
-    if (bubble) {
-      bubble.classList.add('reply-bubble-flash');
-      window.setTimeout(
-        () => bubble.classList.remove('reply-bubble-flash'),
-        1200
-      );
-    }
+    if (bubble) flashBubble(bubble);
   }, []);
+
+  // From a sent/persisted user bubble (no live range): re-find the quoted text
+  // among the assistant bubbles and flash it, or flash the bubble as a fallback.
+  const highlightQuotedText = useCallback(
+    (text: string) => {
+      const container = scrollRef.current;
+      if (!container) return;
+      const range = findRangeForText(container, text);
+      if (range) {
+        flashRange(range);
+        return;
+      }
+      const bubble = findBubbleContaining(container, text);
+      if (bubble) {
+        bubble.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        flashBubble(bubble);
+      }
+    },
+    [flashRange]
+  );
+
+  // From the composer pill: use the saved live range when available, else fall
+  // back to re-finding the quoted text in the transcript.
+  const highlightSource = useCallback(() => {
+    if (quoteRangeRef.current) flashRange(quoteRangeRef.current);
+    else if (quote) highlightQuotedText(quote);
+  }, [flashRange, highlightQuotedText, quote]);
 
   const startNewChat = useCallback(() => {
     abortRef.current?.abort();
@@ -683,6 +702,7 @@ export function TeacherChat({
               role={m.role}
               content={m.content}
               quotable={m.role === 'assistant'}
+              onQuoteClick={highlightQuotedText}
               ref={
                 m.role === 'user' && i === lastUserIdx
                   ? lastUserMessageRef
@@ -832,13 +852,34 @@ export function TeacherChat({
 
 const MessageBubble = forwardRef<
   HTMLDivElement,
-  { role: AiMessage['role']; content: string; quotable?: boolean }
->(function MessageBubble({ role, content, quotable }, ref) {
+  {
+    role: AiMessage['role'];
+    content: string;
+    quotable?: boolean;
+    onQuoteClick?: (text: string) => void;
+  }
+>(function MessageBubble({ role, content, quotable, onQuoteClick }, ref) {
   if (role === 'user') {
+    // A composed reply arrives as a leading markdown blockquote; render it as a
+    // styled quote block rather than literal "> …" lines.
+    const { quote, body } = parseUserMessage(content);
     return (
       <div ref={ref} className="flex justify-end">
-        <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-mint-500 px-3.5 py-2 text-[0.9375rem] text-white dark:text-cocoa-950">
-          {content}
+        <div className="flex max-w-[85%] flex-col gap-1.5 rounded-2xl rounded-br-md bg-mint-700 px-3.5 py-2 text-[0.9375rem] text-white dark:bg-mint-800 dark:text-cocoa-950">
+          {quote !== null && (
+            <button
+              type="button"
+              onClick={() => onQuoteClick?.(quote)}
+              className="flex gap-2 rounded-lg bg-black/10 py-1 pr-2 pl-1.5 text-left transition-colors hover:bg-black/20 dark:bg-black/10 dark:hover:bg-black/20"
+              aria-label="Jump to quoted text"
+            >
+              <span className="w-0.5 shrink-0 self-stretch rounded-full bg-white/50 dark:bg-cocoa-950/40" />
+              <span className="line-clamp-3 text-[0.8125rem] whitespace-pre-wrap italic opacity-80">
+                {quote}
+              </span>
+            </button>
+          )}
+          {body && <span className="whitespace-pre-wrap">{body}</span>}
         </div>
       </div>
     );
@@ -881,11 +922,125 @@ function TypingDots() {
   );
 }
 
+// Split a user message into a leading markdown blockquote (the quoted reply, if
+// any) and the rest. Mirrors the `> …\n\n<text>` shape produced when sending.
+function parseUserMessage(content: string): {
+  quote: string | null;
+  body: string;
+} {
+  const lines = content.split('\n');
+  if (!lines[0]?.startsWith('>')) return { quote: null, body: content };
+  const quoteLines: string[] = [];
+  let i = 0;
+  while (i < lines.length && lines[i].startsWith('>')) {
+    quoteLines.push(lines[i].replace(/^>\s?/, ''));
+    i++;
+  }
+  while (i < lines.length && lines[i].trim() === '') i++;
+  return { quote: quoteLines.join('\n'), body: lines.slice(i).join('\n') };
+}
+
 // The completed-teacher-bubble element containing a node, or null. Used to scope
 // the Reply button to assistant text and to flash the bubble in the fallback.
 function closestAssistant(node: Node | null): HTMLElement | null {
   const el = node instanceof Element ? node : (node?.parentElement ?? null);
   return el?.closest<HTMLElement>('[data-assistant-msg]') ?? null;
+}
+
+// Briefly outline a bubble — the fallback when an exact range isn't available.
+function flashBubble(el: HTMLElement): void {
+  el.classList.add('reply-bubble-flash');
+  window.setTimeout(() => el.classList.remove('reply-bubble-flash'), 1200);
+}
+
+function normalizeWs(s: string): string {
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+// The nearest block-level ancestor of a node within `root`, used to insert a
+// synthetic space at block boundaries (rendered text has none, but a selection's
+// toString() does) when matching quoted text.
+function nearestBlock(node: Node, root: HTMLElement): Element {
+  let el = node.parentElement;
+  while (el && el !== root) {
+    const d = getComputedStyle(el).display;
+    if (d !== 'inline' && d !== 'inline-block') return el;
+    el = el.parentElement;
+  }
+  return root;
+}
+
+// Build a DOM Range covering `target` within an assistant bubble, matching on
+// whitespace-normalized text so it survives markdown's node splitting. Returns
+// the first match across bubbles, or null.
+function findRangeForText(root: HTMLElement, target: string): Range | null {
+  const needle = normalizeWs(target);
+  if (!needle) return null;
+  const bubbles = root.querySelectorAll<HTMLElement>('[data-assistant-msg]');
+  for (const bubble of bubbles) {
+    const range = findRangeInElement(bubble, needle);
+    if (range) return range;
+  }
+  return null;
+}
+
+function findRangeInElement(el: HTMLElement, needle: string): Range | null {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let norm = '';
+  // map[i] = source position of normalized char i.
+  const map: { node: Text; offset: number }[] = [];
+  let prevBlock: Element | null = null;
+  let lastWasSpace = true; // trims leading whitespace
+  for (
+    let node = walker.nextNode() as Text | null;
+    node;
+    node = walker.nextNode() as Text | null
+  ) {
+    const block = nearestBlock(node, el);
+    if (prevBlock && block !== prevBlock && !lastWasSpace) {
+      norm += ' ';
+      map.push({ node, offset: 0 });
+      lastWasSpace = true;
+    }
+    prevBlock = block;
+    const data = node.data;
+    for (let k = 0; k < data.length; k++) {
+      if (/\s/.test(data[k])) {
+        if (!lastWasSpace) {
+          norm += ' ';
+          map.push({ node, offset: k });
+          lastWasSpace = true;
+        }
+      } else {
+        norm += data[k];
+        map.push({ node, offset: k });
+        lastWasSpace = false;
+      }
+    }
+  }
+  const idx = norm.indexOf(needle);
+  if (idx === -1) return null;
+  const start = map[idx];
+  const end = map[idx + needle.length - 1];
+  if (!start || !end) return null;
+  const range = document.createRange();
+  range.setStart(start.node, start.offset);
+  range.setEnd(end.node, end.offset + 1);
+  return range;
+}
+
+// Coarse fallback: the assistant bubble whose text contains the quote.
+function findBubbleContaining(
+  root: HTMLElement,
+  target: string
+): HTMLElement | null {
+  const needle = normalizeWs(target);
+  if (!needle) return null;
+  const bubbles = root.querySelectorAll<HTMLElement>('[data-assistant-msg]');
+  for (const bubble of bubbles) {
+    if (normalizeWs(bubble.textContent ?? '').includes(needle)) return bubble;
+  }
+  return null;
 }
 
 function formatRelative(ts: number): string {

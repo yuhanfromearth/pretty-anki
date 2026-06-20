@@ -42,6 +42,7 @@ body {
   --color-mint-300: var(--mint-300);
   --color-mint-500: var(--mint-500);
   --color-mint-700: var(--mint-700);
+  --color-mint-800: var(--mint-800);
 
   --color-cocoa-950: var(--cocoa-950, #12100c);
   --color-cocoa-900: var(--cocoa-900, #1a1612);
@@ -123,6 +124,7 @@ body {
   --mint-300: #b8d8c8;
   --mint-500: #7fb39a;
   --mint-700: #4f8a72;
+  --mint-800: #3d7560;
 
   /* Streak heat-map ramp: 0 = empty day, 1..10 = increasing reviews. */
   --heat-0: #ece2d0;
@@ -234,6 +236,7 @@ body {
   --mint-300: #4f8a6e;
   --mint-500: #5a9978;
   --mint-700: #6baa88;
+  --mint-800: #8cc4a4;
 
   /* Dark ramp brightens with volume (more reviews = brighter on dark bg). */
   --heat-0: #241e18;
