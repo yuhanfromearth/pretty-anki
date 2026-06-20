@@ -356,3 +356,26 @@ body {
 ::view-transition-new(root) {
   z-index: 2;
 }
+
+/* Teacher-chat "reply": briefly flash the exact quoted substring when the user
+   clicks the quote pill to jump back to its source in the transcript. */
+::highlight(reply-source) {
+  background-color: color-mix(in srgb, var(--mint-500) 45%, transparent);
+  border-radius: 2px;
+}
+
+/* Fallback when the CSS Custom Highlight API is unavailable: flash a ring on
+   the whole source bubble instead of the exact substring. */
+@keyframes reply-bubble-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  25% {
+    box-shadow: 0 0 0 2px var(--mint-500);
+  }
+}
+.reply-bubble-flash {
+  border-radius: 1rem;
+  animation: reply-bubble-flash 1.2s ease-out;
+}

@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import Markdown from 'react-markdown';
@@ -14,6 +15,7 @@ import {
   X,
   MessageSquareText,
   Trash2,
+  Reply,
 } from 'lucide-react';
 import type { AiCardContext, AiMessage, UserSettings } from '@nts/shared';
 import {
@@ -67,6 +69,19 @@ export function TeacherChat({
   // delete-all button armed. Both require a second click to commit.
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmingAll, setConfirmingAll] = useState(false);
+
+  // Reply-to-selection: when the user selects text inside a (completed) teacher
+  // bubble, a floating Reply button appears above it. Clicking it captures the
+  // selection as a single quote shown in a composer pill; the saved DOM range
+  // lets the pill jump back and flash the exact substring in the transcript.
+  const [quote, setQuote] = useState<string | null>(null);
+  const quoteRangeRef = useRef<Range | null>(null);
+  // Viewport position of the floating Reply button, or null when hidden.
+  const [replyBtn, setReplyBtn] = useState<{ x: number; y: number } | null>(
+    null
+  );
+  // The cloned range for the live (not-yet-confirmed) selection.
+  const pendingRangeRef = useRef<Range | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -141,6 +156,9 @@ export function TeacherChat({
     setStreamingText(null);
     setError(null);
     setInput('');
+    setQuote(null);
+    quoteRangeRef.current = null;
+    setReplyBtn(null);
   }, [open]);
 
   // Size the trailing spacer so the latest turn's user message can sit at the
@@ -216,6 +234,114 @@ export function TeacherChat({
     if (open && !streaming) textareaRef.current?.focus();
   }, [open, selectedId, streaming]);
 
+  // Watch text selection while the dialog is open. Show the Reply button on
+  // mouseup when a non-empty selection sits fully within one completed teacher
+  // bubble; fade it out as soon as the selection collapses or the transcript
+  // scrolls (its viewport-fixed position would otherwise drift).
+  useEffect(() => {
+    if (!open) return;
+    const evaluate = () => {
+      const sel = document.getSelection();
+      if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+        pendingRangeRef.current = null;
+        setReplyBtn(null);
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      const text = sel.toString().trim();
+      const bubble = closestAssistant(range.commonAncestorContainer);
+      if (
+        !text ||
+        !bubble ||
+        !bubble.contains(range.startContainer) ||
+        !bubble.contains(range.endContainer)
+      ) {
+        pendingRangeRef.current = null;
+        setReplyBtn(null);
+        return;
+      }
+      pendingRangeRef.current = range.cloneRange();
+      const rect = range.getBoundingClientRect();
+      setReplyBtn({ x: rect.left + rect.width / 2, y: rect.top });
+    };
+    const onSelectionChange = () => {
+      const sel = document.getSelection();
+      // Only react to collapses here; growth/positioning is handled on mouseup
+      // so the button doesn't jitter mid-drag.
+      if (!sel || sel.isCollapsed) {
+        pendingRangeRef.current = null;
+        setReplyBtn(null);
+      }
+    };
+    const onScroll = () => setReplyBtn(null);
+    document.addEventListener('mouseup', evaluate);
+    document.addEventListener('selectionchange', onSelectionChange);
+    // Capture phase so we catch scrolling on the transcript (or any nested
+    // scroller) regardless of when it mounts — scroll events don't bubble.
+    document.addEventListener('scroll', onScroll, { capture: true });
+    return () => {
+      document.removeEventListener('mouseup', evaluate);
+      document.removeEventListener('selectionchange', onSelectionChange);
+      document.removeEventListener('scroll', onScroll, { capture: true });
+    };
+  }, [open]);
+
+  // Confirm the live selection as the active quote and dismiss the button.
+  const onClickReply = useCallback(() => {
+    const range = pendingRangeRef.current;
+    if (!range) return;
+    setQuote(range.toString().trim());
+    quoteRangeRef.current = range;
+    pendingRangeRef.current = null;
+    setReplyBtn(null);
+    document.getSelection()?.removeAllRanges();
+    textareaRef.current?.focus();
+  }, []);
+
+  const clearQuote = useCallback(() => {
+    setQuote(null);
+    quoteRangeRef.current = null;
+  }, []);
+
+  // Scroll the quoted text back into view and briefly flash it. Prefer the CSS
+  // Custom Highlight API (exact substring); fall back to flashing the bubble.
+  const highlightSource = useCallback(() => {
+    const range = quoteRangeRef.current;
+    if (!range) return;
+    const container = scrollRef.current;
+    const rect = range.getBoundingClientRect();
+    if (container && rect.height) {
+      const cRect = container.getBoundingClientRect();
+      container.scrollBy({
+        top:
+          rect.top - cRect.top - container.clientHeight / 2 + rect.height / 2,
+        behavior: 'smooth',
+      });
+    }
+    const cssAny = CSS as unknown as {
+      highlights?: {
+        set(k: string, v: unknown): void;
+        delete(k: string): void;
+      };
+    };
+    const HighlightCtor = (
+      window as unknown as { Highlight?: new (...r: Range[]) => unknown }
+    ).Highlight;
+    if (cssAny.highlights && HighlightCtor) {
+      cssAny.highlights.set('reply-source', new HighlightCtor(range));
+      window.setTimeout(() => cssAny.highlights?.delete('reply-source'), 1200);
+      return;
+    }
+    const bubble = closestAssistant(range.commonAncestorContainer);
+    if (bubble) {
+      bubble.classList.add('reply-bubble-flash');
+      window.setTimeout(
+        () => bubble.classList.remove('reply-bubble-flash'),
+        1200
+      );
+    }
+  }, []);
+
   const startNewChat = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -224,16 +350,21 @@ export function TeacherChat({
     setSelectedId(null);
     setMessages([]);
     setInput('');
+    clearQuote();
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, []);
+  }, [clearQuote]);
 
-  const switchTo = useCallback((id: string) => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setStreamingText(null);
-    setError(null);
-    setSelectedId(id);
-  }, []);
+  const switchTo = useCallback(
+    (id: string) => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setStreamingText(null);
+      setError(null);
+      setSelectedId(id);
+      clearQuote();
+    },
+    [clearQuote]
+  );
 
   const deleteOneMutation = useMutation({
     mutationFn: (id: string) => deleteConversation(noteId, id),
@@ -266,12 +397,26 @@ export function TeacherChat({
   const send = useCallback(
     async (override?: string) => {
       const fromComposer = override === undefined;
-      const text = (override ?? input).trim();
-      if (!text || streaming) return;
+      const raw = (override ?? input).trim();
+      if (!raw || streaming) return;
+
+      // Fold an active quote into the outgoing text as a markdown blockquote.
+      // Only composer sends carry the quote; quick-prompt sends never do.
+      const quoted = fromComposer ? quote : null;
+      const savedRange = quoteRangeRef.current;
+      const text = quoted
+        ? `${quoted
+            .split('\n')
+            .map((l) => `> ${l}`)
+            .join('\n')}\n\n${raw}`
+        : raw;
 
       const base = messages;
       const userMsg: AiMessage = { role: 'user', content: text };
-      if (fromComposer) setInput('');
+      if (fromComposer) {
+        setInput('');
+        clearQuote();
+      }
       setError(null);
       setMessages([...base, userMsg]);
       setStreamingText('');
@@ -310,9 +455,17 @@ export function TeacherChat({
       if (controller.signal.aborted || failed) {
         setStreamingText(null);
         setMessages(base);
-        // Only return the text to the composer for a composer-originated send;
-        // a quick-prompt send must leave any existing draft intact.
-        if (failed && fromComposer) setInput(text);
+        // Only return the draft to the composer for a composer-originated send;
+        // a quick-prompt send must leave any existing draft intact. Restore the
+        // raw text and the quote separately so the blockquote isn't dumped into
+        // the textarea as literal "> …".
+        if (failed && fromComposer) {
+          setInput(raw);
+          if (quoted) {
+            setQuote(quoted);
+            quoteRangeRef.current = savedRange;
+          }
+        }
         return;
       }
 
@@ -326,7 +479,17 @@ export function TeacherChat({
         });
       }
     },
-    [input, streaming, messages, selectedId, noteId, context, queryClient]
+    [
+      input,
+      streaming,
+      messages,
+      selectedId,
+      noteId,
+      context,
+      queryClient,
+      quote,
+      clearQuote,
+    ]
   );
 
   const onComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -519,6 +682,7 @@ export function TeacherChat({
               key={i}
               role={m.role}
               content={m.content}
+              quotable={m.role === 'assistant'}
               ref={
                 m.role === 'user' && i === lastUserIdx
                   ? lastUserMessageRef
@@ -569,38 +733,98 @@ export function TeacherChat({
               ))}
             </div>
           )}
-          <div className="flex items-end gap-2 rounded-2xl border border-milk-200 bg-milk-50/60 px-2 py-1.5 transition-colors focus-within:border-mint-400/60">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onComposerKeyDown}
-              placeholder="Ask the teacher…"
-              rows={1}
-              className="max-h-40 min-h-0 flex-1 resize-none border-0 bg-transparent px-1.5 py-1.5 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
-            />
-            {streaming ? (
-              <button
-                type="button"
-                onClick={() => abortRef.current?.abort()}
-                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink-700 text-milk-50 transition-colors hover:bg-ink-900"
-                aria-label="Stop"
-              >
-                <Square className="size-3.5 fill-current" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void send()}
-                disabled={!input.trim()}
-                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-mint-500 text-white transition-colors hover:bg-mint-700 disabled:opacity-40 dark:text-cocoa-950"
-                aria-label="Send"
-              >
-                <ArrowUp className="size-4" />
-              </button>
+          <div className="flex flex-col gap-1.5 rounded-2xl border border-milk-200 bg-milk-50/60 px-2 py-1.5 transition-colors focus-within:border-mint-400/60">
+            {/* Active quote pill — click the text to flash its source, ✕ to clear. */}
+            {quote !== null && (
+              <div className="flex items-center gap-1.5 rounded-lg bg-milk-100/80 py-1 pr-1 pl-1.5">
+                <button
+                  type="button"
+                  onClick={highlightSource}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  aria-label="Jump to quoted text"
+                >
+                  <span className="w-0.5 shrink-0 self-stretch rounded-full bg-mint-500" />
+                  <span className="line-clamp-1 text-xs text-ink-500 italic">
+                    {quote}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={clearQuote}
+                  className="flex size-6 shrink-0 items-center justify-center rounded-md text-ink-300 transition-colors hover:bg-milk-200 hover:text-ink-500"
+                  aria-label="Remove quote"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
             )}
+            <div className="flex items-end gap-2">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={onComposerKeyDown}
+                placeholder="Ask the teacher…"
+                rows={1}
+                className="max-h-40 min-h-0 flex-1 resize-none border-0 bg-transparent px-1.5 py-1.5 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
+              />
+              {streaming ? (
+                <button
+                  type="button"
+                  onClick={() => abortRef.current?.abort()}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink-700 text-milk-50 transition-colors hover:bg-ink-900"
+                  aria-label="Stop"
+                >
+                  <Square className="size-3.5 fill-current" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void send()}
+                  disabled={!input.trim()}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-mint-500 text-white transition-colors hover:bg-mint-700 disabled:opacity-40 dark:text-cocoa-950"
+                  aria-label="Send"
+                >
+                  <ArrowUp className="size-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Floating Reply button above an active text selection (portaled out of
+            the dialog so its overflow-hidden body can't clip it). It fades out
+            when the selection collapses or the transcript scrolls. */}
+        {createPortal(
+          <AnimatePresence>
+            {replyBtn !== null && (
+              <motion.button
+                type="button"
+                // Keep the selection alive through the click so onClickReply can
+                // still read the live range.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={onClickReply}
+                // Animate opacity only — animating a transform value would make
+                // motion overwrite the centering translate below.
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12 }}
+                style={{
+                  position: 'fixed',
+                  left: replyBtn.x,
+                  top: replyBtn.y - 8,
+                  transform: 'translate(-50%, -100%)',
+                }}
+                className="z-60 flex items-center gap-1.5 rounded-lg bg-ink-900 px-2.5 py-1.5 text-xs font-medium text-milk-50 shadow-lg transition-colors hover:bg-ink-700"
+              >
+                <Reply className="size-3.5" />
+                Reply
+              </motion.button>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -608,8 +832,8 @@ export function TeacherChat({
 
 const MessageBubble = forwardRef<
   HTMLDivElement,
-  { role: AiMessage['role']; content: string }
->(function MessageBubble({ role, content }, ref) {
+  { role: AiMessage['role']; content: string; quotable?: boolean }
+>(function MessageBubble({ role, content, quotable }, ref) {
   if (role === 'user') {
     return (
       <div ref={ref} className="flex justify-end">
@@ -626,7 +850,10 @@ const MessageBubble = forwardRef<
       animate={{ opacity: 1, y: 0 }}
       className="max-w-[92%]"
     >
-      <div className="prose prose-sm dark:prose-invert max-w-none rounded-2xl rounded-bl-md bg-milk-100/70 px-3.5 py-2 text-lg! text-ink-800 prose-p:my-1.5 prose-pre:my-2 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-ol:my-1.5">
+      <div
+        data-assistant-msg={quotable ? '' : undefined}
+        className="prose prose-sm dark:prose-invert max-w-none rounded-2xl rounded-bl-md bg-milk-100/70 px-3.5 py-2 text-lg! text-ink-800 prose-p:my-1.5 prose-pre:my-2 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1.5 prose-ol:my-1.5"
+      >
         {content ? (
           <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
         ) : (
@@ -652,6 +879,13 @@ function TypingDots() {
       </AnimatePresence>
     </div>
   );
+}
+
+// The completed-teacher-bubble element containing a node, or null. Used to scope
+// the Reply button to assistant text and to flash the bubble in the fallback.
+function closestAssistant(node: Node | null): HTMLElement | null {
+  const el = node instanceof Element ? node : (node?.parentElement ?? null);
+  return el?.closest<HTMLElement>('[data-assistant-msg]') ?? null;
 }
 
 function formatRelative(ts: number): string {
