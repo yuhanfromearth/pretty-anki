@@ -39,7 +39,10 @@ function TemplatesPage() {
           <LayoutTemplate className="size-5 text-ink-400" />
           <h1 className="font-display text-2xl text-ink-900">Templates</h1>
         </div>
-        <Button onClick={() => setCreating(true)}>
+        <Button
+          onClick={() => setCreating(true)}
+          className="bg-mint-700 text-white shadow-soft hover:-translate-y-px hover:bg-mint-800 hover:shadow-medium dark:text-cocoa-950"
+        >
           <Plus /> New template
         </Button>
       </div>
