@@ -23,8 +23,10 @@ function Breadcrumb() {
       if (part.startsWith('$')) {
         const paramName = part.slice(1);
         const value = (m.params as Record<string, string>)[paramName];
-        if (value) segments.push(decodeURIComponent(value));
-      } else {
+        const decoded = value && decodeURIComponent(value);
+        if (decoded && decoded !== segments[segments.length - 1])
+          segments.push(decoded);
+      } else if (part !== segments[segments.length - 1]) {
         segments.push(part);
       }
     }
