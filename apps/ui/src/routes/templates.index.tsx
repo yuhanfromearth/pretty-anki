@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { LayoutTemplate, Plus, X } from 'lucide-react';
+import { LayoutTemplate, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '#/components/ui/button';
 import { Input } from '#/components/ui/input';
 import { Badge } from '#/components/ui/badge';
@@ -28,6 +28,7 @@ function TemplatesPage() {
     retry: false,
   });
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const templates = query.data?.templates ?? [];
   const orphans = query.data?.orphans ?? [];
@@ -55,23 +56,36 @@ function TemplatesPage() {
 
       <div className="flex flex-col gap-2">
         {templates.map((t) => (
-          <Link
+          <div
             key={t.modelId}
-            to="/templates/$modelId"
-            params={{ modelId: String(t.modelId) }}
-            className="flex items-center gap-3 rounded-xl border border-milk-200/70 bg-milk-50/70 px-4 py-3 transition-colors hover:bg-milk-100"
+            className="group flex items-center gap-3 rounded-xl border border-milk-200/70 bg-milk-50/70 pr-2 transition-colors hover:bg-milk-100"
           >
-            <span className="flex-1 truncate text-ink-800">{t.name}</span>
-            <span className="font-mono text-xs text-ink-300">
-              {t.fields.length} field{t.fields.length === 1 ? '' : 's'}
-            </span>
-            {t.isCloze && <Badge variant="outline">cloze</Badge>}
-            {t.customized ? (
-              <Badge variant="secondary">customized</Badge>
-            ) : (
-              <Badge variant="ghost">default</Badge>
-            )}
-          </Link>
+            <Link
+              to="/templates/$modelId"
+              params={{ modelId: String(t.modelId) }}
+              className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3"
+            >
+              <span className="flex-1 truncate text-ink-800">{t.name}</span>
+              <span className="font-mono text-xs text-ink-300">
+                {t.fields.length} field{t.fields.length === 1 ? '' : 's'}
+              </span>
+              {t.isCloze && <Badge variant="outline">cloze</Badge>}
+              {t.customized ? (
+                <Badge variant="secondary">customized</Badge>
+              ) : (
+                <Badge variant="ghost">default</Badge>
+              )}
+            </Link>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={`Delete ${t.name}`}
+              className="text-ink-300 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
+              onClick={() => setDeleting(true)}
+            >
+              <Trash2 />
+            </Button>
+          </div>
         ))}
       </div>
 
@@ -85,7 +99,37 @@ function TemplatesPage() {
       )}
 
       <CreateDialog open={creating} onClose={() => setCreating(false)} />
+      <DeleteInfoDialog open={deleting} onClose={() => setDeleting(false)} />
     </div>
+  );
+}
+
+function DeleteInfoDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogTitle>Delete a note type in Anki</DialogTitle>
+        <DialogDescription>
+          AnkiConnect can’t delete note types, so this can’t be done from here.
+          To remove one, open the Anki desktop app and go to{' '}
+          <span className="text-ink-700">
+            Tools → Manage Note Types → Delete
+          </span>
+          . Be careful — deleting a note type also deletes every note that uses
+          it.
+        </DialogDescription>
+
+        <div className="mt-4 flex justify-end">
+          <Button onClick={onClose}>Got it</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

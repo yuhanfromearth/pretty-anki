@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import type { FieldOp, TemplateDetail } from '@nts/shared';
 import { Button } from '#/components/ui/button';
 import { Input } from '#/components/ui/input';
@@ -15,19 +15,25 @@ import { applyFieldOp, templatesKey } from './api';
 /** Edits the note type's fields (which live in Anki) as compact chips: click a
  *  chip's name to rename inline, ✕ to remove. Remove is gated behind a typed
  *  confirmation showing the affected note count, since it drops data on every
- *  note. Field order isn't shown here — placement is owned by the block stacks,
- *  so order would only mislead. The backend keeps the layout consistent (rename
- *  remaps blocks, remove cascades) and returns the detail pushed back up. */
+ *  note. The backend keeps the layout consistent (rename remaps blocks, remove
+ *  cascades) and returns the detail pushed back up.
+ *
+ *  Field order is normally hidden — placement is owned by the block stacks, so
+ *  order would only mislead. But cloze types have no block stacks (Anki renders
+ *  them), making Anki's field order their only placement lever; pass
+ *  `reorderable` there to show ‹ › controls that dispatch the reposition op. */
 export function FieldPanel({
   modelId,
   fields,
   noteCount,
   onApplied,
+  reorderable = false,
 }: {
   modelId: number;
   fields: string[];
   noteCount: number;
   onApplied: (detail: TemplateDetail) => void;
+  reorderable?: boolean;
 }) {
   const qc = useQueryClient();
   const [adding, setAdding] = useState('');
@@ -65,6 +71,27 @@ export function FieldPanel({
     }
   };
 
+  const addControl = (
+    <span className="inline-flex items-center gap-1">
+      <Input
+        className="h-8 w-32"
+        placeholder="New field"
+        value={adding}
+        onChange={(e) => setAdding(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && commitAdd()}
+      />
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        disabled={!adding.trim()}
+        onClick={commitAdd}
+        title="Add field"
+      >
+        <Plus />
+      </Button>
+    </span>
+  );
+
   return (
     <div className="flex flex-col gap-2">
       <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-300">
@@ -77,35 +104,65 @@ export function FieldPanel({
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        {fields.map((field) =>
-          renaming?.from === field ? (
-            <Input
+      {reorderable ? (
+        // Cloze types: a vertical list with stacked up/down controls, matching
+        // the block-stack reorder idiom, since Anki's field order is their only
+        // placement lever.
+        <div className="flex flex-col gap-2">
+          {fields.map((field, i) => (
+            <div
               key={field}
-              className="h-8 w-32"
-              value={renaming.to}
-              autoFocus
-              onChange={(e) => setRenaming({ from: field, to: e.target.value })}
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitRename();
-                if (e.key === 'Escape') setRenaming(null);
-              }}
-            />
-          ) : (
-            <span
-              key={field}
-              className="inline-flex h-8 items-center gap-1 rounded-full border border-milk-300/80 bg-milk-50/80 pr-1 pl-3 text-sm text-ink-700"
+              className="flex items-center gap-1.5 rounded-xl border border-milk-200/70 bg-milk-50/70 p-2.5"
             >
+              <div className="flex shrink-0 flex-col">
+                <button
+                  className="flex size-4 items-center justify-center text-ink-300 hover:text-ink-600 disabled:opacity-30"
+                  disabled={i === 0}
+                  aria-label={`Move ${field} up`}
+                  onClick={() =>
+                    run({ op: 'reposition', name: field, index: i - 1 })
+                  }
+                >
+                  <ChevronUp className="size-3.5" />
+                </button>
+                <button
+                  className="flex size-4 items-center justify-center text-ink-300 hover:text-ink-600 disabled:opacity-30"
+                  disabled={i === fields.length - 1}
+                  aria-label={`Move ${field} down`}
+                  onClick={() =>
+                    run({ op: 'reposition', name: field, index: i + 1 })
+                  }
+                >
+                  <ChevronDown className="size-3.5" />
+                </button>
+              </div>
+
+              {renaming?.from === field ? (
+                <Input
+                  className="h-8 flex-1"
+                  value={renaming.to}
+                  autoFocus
+                  onChange={(e) =>
+                    setRenaming({ from: field, to: e.target.value })
+                  }
+                  onBlur={commitRename}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitRename();
+                    if (e.key === 'Escape') setRenaming(null);
+                  }}
+                />
+              ) : (
+                <button
+                  className="flex-1 truncate text-left text-sm text-ink-700 hover:text-ink-900"
+                  title="Rename field"
+                  onClick={() => setRenaming({ from: field, to: field })}
+                >
+                  {field}
+                </button>
+              )}
+
               <button
-                className="max-w-44 truncate hover:text-ink-900"
-                title="Rename field"
-                onClick={() => setRenaming({ from: field, to: field })}
-              >
-                {field}
-              </button>
-              <button
-                className="flex size-5 items-center justify-center rounded-full text-ink-300 transition-colors hover:bg-milk-200 hover:text-destructive disabled:pointer-events-none disabled:opacity-30"
+                className="flex size-5 shrink-0 items-center justify-center rounded-full text-ink-300 transition-colors hover:bg-milk-200 hover:text-destructive disabled:pointer-events-none disabled:opacity-30"
                 title="Remove field"
                 disabled={fields.length <= 1}
                 onClick={() => {
@@ -115,29 +172,59 @@ export function FieldPanel({
               >
                 <X className="size-3" />
               </button>
-            </span>
-          )
-        )}
+            </div>
+          ))}
 
-        <span className="inline-flex items-center gap-1">
-          <Input
-            className="h-8 w-32"
-            placeholder="New field"
-            value={adding}
-            onChange={(e) => setAdding(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && commitAdd()}
-          />
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            disabled={!adding.trim()}
-            onClick={commitAdd}
-            title="Add field"
-          >
-            <Plus />
-          </Button>
-        </span>
-      </div>
+          <div className="self-start">{addControl}</div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          {fields.map((field) =>
+            renaming?.from === field ? (
+              <Input
+                key={field}
+                className="h-8 w-32"
+                value={renaming.to}
+                autoFocus
+                onChange={(e) =>
+                  setRenaming({ from: field, to: e.target.value })
+                }
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitRename();
+                  if (e.key === 'Escape') setRenaming(null);
+                }}
+              />
+            ) : (
+              <span
+                key={field}
+                className="inline-flex h-8 items-center gap-1 rounded-full border border-milk-300/80 bg-milk-50/80 pr-1 pl-3 text-sm text-ink-700"
+              >
+                <button
+                  className="max-w-44 truncate hover:text-ink-900"
+                  title="Rename field"
+                  onClick={() => setRenaming({ from: field, to: field })}
+                >
+                  {field}
+                </button>
+                <button
+                  className="flex size-5 items-center justify-center rounded-full text-ink-300 transition-colors hover:bg-milk-200 hover:text-destructive disabled:pointer-events-none disabled:opacity-30"
+                  title="Remove field"
+                  disabled={fields.length <= 1}
+                  onClick={() => {
+                    setRemoving(field);
+                    setConfirmText('');
+                  }}
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            )
+          )}
+
+          {addControl}
+        </div>
+      )}
 
       <Dialog
         open={removing !== null}

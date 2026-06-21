@@ -176,122 +176,139 @@ function BuilderPage() {
         <h1 className="font-display text-2xl text-ink-900">{detail.name}</h1>
         {detail.isCloze && <Badge variant="outline">cloze</Badge>}
         <span className="ml-auto font-mono text-xs text-ink-300">
-          {saveMutation.isPending ? 'saving…' : 'saved'}
+          {detail.isCloze ? '' : saveMutation.isPending ? 'saving…' : 'saved'}
         </span>
-        <Dialog open={resetOpen} onOpenChange={setResetOpen}>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={!selected?.authored}
-            onClick={() => setResetOpen(true)}
-            title={
-              selected?.authored
-                ? 'Clear this direction’s layout and revert it to Anki'
-                : 'This direction isn’t customized yet'
-            }
-          >
-            <RotateCcw /> Reset {multi ? selected?.name : 'layout'}
-          </Button>
-          <DialogContent className="max-w-sm">
-            <DialogTitle className="text-base font-semibold text-ink-900">
-              Reset {multi ? `“${selected?.name}”` : 'layout'}?
-            </DialogTitle>
-            <DialogDescription className="mt-2.5 text-sm text-ink-500">
-              This clears the app layout for{' '}
-              <strong className="text-ink-700">
-                {multi ? selected?.name : 'this note type'}
-              </strong>{' '}
-              and reverts it to what’s configured in Anki.
-              {multi && ' Other directions keep their layouts.'} This can’t be
-              undone.
-            </DialogDescription>
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <DialogClose>
-                <Button variant="ghost" size="sm">
-                  Cancel
+        {!detail.isCloze && (
+          <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!selected?.authored}
+              onClick={() => setResetOpen(true)}
+              title={
+                selected?.authored
+                  ? 'Clear this direction’s layout and revert it to Anki'
+                  : 'This direction isn’t customized yet'
+              }
+            >
+              <RotateCcw /> Reset {multi ? selected?.name : 'layout'}
+            </Button>
+            <DialogContent className="max-w-sm">
+              <DialogTitle className="text-base font-semibold text-ink-900">
+                Reset {multi ? `“${selected?.name}”` : 'layout'}?
+              </DialogTitle>
+              <DialogDescription className="mt-2.5 text-sm text-ink-500">
+                This clears the app layout for{' '}
+                <strong className="text-ink-700">
+                  {multi ? selected?.name : 'this note type'}
+                </strong>{' '}
+                and reverts it to what’s configured in Anki.
+                {multi && ' Other directions keep their layouts.'} This can’t be
+                undone.
+              </DialogDescription>
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <DialogClose>
+                  <Button variant="ghost" size="sm">
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={resetMutation.isPending}
+                  onClick={() => resetMutation.mutate()}
+                >
+                  {resetMutation.isPending ? 'Resetting…' : 'Reset'}
                 </Button>
-              </DialogClose>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={resetMutation.isPending}
-                onClick={() => resetMutation.mutate()}
-              >
-                {resetMutation.isPending ? 'Resetting…' : 'Reset'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      {detail.isCloze && (
-        <p className="mb-4 shrink-0 rounded-lg border border-milk-200/70 bg-milk-50/70 px-3 py-2 text-xs text-ink-400">
-          Cloze note types keep Anki’s built-in rendering, so layout changes
-          here won’t affect how their cards display.
-        </p>
-      )}
-
-      <div className="grid min-h-0 flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
-        {/* Editor — vertically centered, scrolls from the top when it overflows */}
-        <div className="flex flex-col overflow-y-auto pr-1">
-          <div className="my-auto flex flex-col gap-6 pt-1 pb-20">
+      {detail.isCloze ? (
+        // Cloze types render through Anki's built-in cloze engine, which this
+        // app never overwrites — so layout/CSS editing here would be a no-op.
+        // Only field edits actually reach the note type, so that's all we show.
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="mx-auto flex max-w-xl flex-col gap-4 pt-1 pb-20">
+            <p className="rounded-lg border border-milk-200/70 bg-milk-50/70 px-3 py-2 text-xs text-ink-400">
+              This is a cloze note type. Anki renders cloze cards with its own
+              built-in template, so layout and styling are managed in Anki, not
+              here. You can still add, rename, remove, and reorder fields below.
+            </p>
             <FieldPanel
               modelId={modelId}
               fields={fields}
               noteCount={detail.noteCount}
               onApplied={onFieldApplied}
+              reorderable
             />
-            {multi && (
-              <DirectionTabs
-                cards={cards}
-                selectedOrd={selectedOrd}
-                onSelect={(ord) => {
-                  flushSave();
-                  setSelectedOrd(ord);
+          </div>
+        </div>
+      ) : (
+        <div className="grid min-h-0 flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
+          {/* Editor — vertically centered, scrolls from the top when it overflows */}
+          <div className="flex flex-col overflow-y-auto pr-1">
+            <div className="my-auto flex flex-col gap-6 pt-1 pb-20">
+              <FieldPanel
+                modelId={modelId}
+                fields={fields}
+                noteCount={detail.noteCount}
+                onApplied={onFieldApplied}
+              />
+              {multi && (
+                <DirectionTabs
+                  cards={cards}
+                  selectedOrd={selectedOrd}
+                  onSelect={(ord) => {
+                    flushSave();
+                    setSelectedOrd(ord);
+                  }}
+                />
+              )}
+              <div className="flex flex-col gap-6">
+                <BlockStack
+                  label="Front"
+                  blocks={layout.front}
+                  fields={fields}
+                  onChange={(b) => setSide('front', b)}
+                />
+                <BlockStack
+                  label="Back"
+                  blocks={layout.back}
+                  fields={fields}
+                  onChange={(b) => setSide('back', b)}
+                />
+              </div>
+              <CustomCss
+                value={css}
+                onChange={(v) => {
+                  setCss(v);
+                  save({ css: v });
                 }}
               />
-            )}
-            <div className="flex flex-col gap-6">
-              <BlockStack
-                label="Front"
-                blocks={layout.front}
+            </div>
+          </div>
+
+          {/* Preview — vertically centered, scrolls only if it overflows */}
+          <div className="flex flex-col overflow-y-auto">
+            <div className="my-auto pb-20">
+              <TemplatePreview
+                modelId={modelId}
                 fields={fields}
-                onChange={(b) => setSide('front', b)}
-              />
-              <BlockStack
-                label="Back"
-                blocks={layout.back}
-                fields={fields}
-                onChange={(b) => setSide('back', b)}
+                layout={layout}
+                css={css || undefined}
+                sampleNoteId={sampleNoteId}
+                onPickSample={(id) => {
+                  setSampleNoteId(id);
+                  save({ sampleNoteId: id });
+                }}
               />
             </div>
-            <CustomCss
-              value={css}
-              onChange={(v) => {
-                setCss(v);
-                save({ css: v });
-              }}
-            />
           </div>
         </div>
-
-        {/* Preview — vertically centered, scrolls only if it overflows */}
-        <div className="flex flex-col overflow-y-auto">
-          <div className="my-auto pb-20">
-            <TemplatePreview
-              modelId={modelId}
-              fields={fields}
-              layout={layout}
-              css={css || undefined}
-              sampleNoteId={sampleNoteId}
-              onPickSample={(id) => {
-                setSampleNoteId(id);
-                save({ sampleNoteId: id });
-              }}
-            />
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
