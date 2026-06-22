@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
 import { AnkiController } from './anki/anki.controller.js';
 import { ReviewController } from './anki/review.controller.js';
 import { AnkiConnectService } from './anki/anki-connect.service.js';
@@ -38,7 +36,6 @@ const clientRoot = join(
     }),
   ],
   controllers: [
-    AppController,
     AnkiController,
     ReviewController,
     SettingsController,
@@ -47,7 +44,6 @@ const clientRoot = join(
     ModelsController,
   ],
   providers: [
-    AppService,
     AnkiConnectService,
     SettingsService,
     ModelsService,

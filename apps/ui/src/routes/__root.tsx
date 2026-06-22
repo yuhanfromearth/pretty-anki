@@ -3,9 +3,6 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router';
-// import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-// import { TanStackDevtools } from "@tanstack/react-devtools";
-// import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 import appCss from '../styles.css?url';
 import { Header } from '../components/header';
@@ -61,18 +58,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <main className="min-h-0 flex-1 max-w-5xl w-full mx-auto px-5 sm:px-8 pt-2 pb-6">
           {children}
         </main>
-        {/*<TanStackDevtools
-          config={{
-            position: "bottom-right",
-          }}
-          plugins={[
-            {
-              name: "Tanstack Router",
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-            TanStackQueryDevtools,
-          ]}
-        />*/}
         <Scripts />
       </body>
     </html>
