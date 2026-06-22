@@ -92,8 +92,24 @@ export function DeckRow({
       whileTap={{ scale: 0.975 }}
       transition={{ type: 'spring', stiffness: 400, damping: 28 }}
     >
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold text-ink-900 truncate">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {hasChildren ? (
+          <motion.button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapse?.();
+            }}
+            className={`flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors ${isSelected ? 'text-white/70 hover:text-white dark:text-cocoa-950/70 dark:hover:text-cocoa-950' : 'text-ink-300 hover:text-ink-700'}`}
+            animate={{ rotate: isCollapsed ? 180 : 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          >
+            <ChevronUp className="size-4" />
+          </motion.button>
+        ) : (
+          <div className="size-5 shrink-0" />
+        )}
+        <div className="min-w-0 truncate text-sm font-semibold text-ink-900">
           {displayName ?? deck.name}
         </div>
       </div>
@@ -132,7 +148,7 @@ export function DeckRow({
         </Tooltip.Root>
       </Tooltip.Provider>
 
-      <div className="w-14 text-right">
+      <div className="w-14 pr-1.5 text-right">
         {isClear ? (
           <span
             className={`inline-flex items-center gap-0.5 text-xs font-medium ${isSelected ? 'text-white dark:text-cocoa-950' : 'text-ink-300'}`}
@@ -247,23 +263,6 @@ export function DeckRow({
           </div>
         </DialogContent>
       </Dialog>
-
-      {hasChildren ? (
-        <motion.button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleCollapse?.();
-          }}
-          className={`flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors ${isSelected ? 'text-white/70 hover:text-white dark:text-cocoa-950/70 dark:hover:text-cocoa-950' : 'text-ink-300 hover:text-ink-700'}`}
-          animate={{ rotate: isCollapsed ? 180 : 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        >
-          <ChevronUp className="size-5" />
-        </motion.button>
-      ) : (
-        <div className="w-7 shrink-0" />
-      )}
     </motion.div>
   );
 }

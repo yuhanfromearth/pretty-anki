@@ -58,15 +58,14 @@ function TemplatesPage() {
         {templates.map((t) => (
           <div
             key={t.modelId}
-            className="group flex items-center gap-3 rounded-xl border border-milk-200/70 bg-milk-50/70 pr-2 transition-colors hover:bg-milk-100"
+            className="group flex items-center rounded-xl border border-milk-200/70 bg-milk-50/70 pr-2 transition-colors hover:bg-milk-100"
           >
             <Link
               to="/templates/$modelId"
               params={{ modelId: String(t.modelId) }}
-              className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3"
+              className="flex min-w-0 flex-1 items-center gap-3 py-3 pr-2 pl-4"
             >
-              <span className="flex-1 truncate text-ink-800">{t.name}</span>
-              <span className="font-mono text-xs text-ink-300">
+              <span className="shrink-0 font-mono text-xs text-ink-300">
                 {t.fields.length} field{t.fields.length === 1 ? '' : 's'}
               </span>
               {t.isCloze && <Badge variant="outline">cloze</Badge>}
@@ -75,16 +74,21 @@ function TemplatesPage() {
               ) : (
                 <Badge variant="ghost">default</Badge>
               )}
+              <span className="flex-1 truncate text-right text-ink-800">
+                {t.name}
+              </span>
             </Link>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              aria-label={`Delete ${t.name}`}
-              className="text-ink-300 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
-              onClick={() => setDeleting(true)}
-            >
-              <Trash2 />
-            </Button>
+            <div className="w-0 shrink-0 overflow-hidden opacity-0 transition-all duration-200 group-hover:w-8 group-hover:opacity-100 group-has-focus-visible:opacity-100">
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-label={`Delete ${t.name}`}
+                className="text-ink-300 hover:text-destructive"
+                onClick={() => setDeleting(true)}
+              >
+                <Trash2 />
+              </Button>
+            </div>
           </div>
         ))}
       </div>
