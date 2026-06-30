@@ -4,7 +4,7 @@
   "description": "Web UI for Anki running locally.",
   "type": "module",
   "license": "MIT",
-  "private": true,
+  "repository": "github:yuhanfromearth/pretty-anki",
   "bin": {
     "nts": "bin/nts.mjs"
   },
@@ -28,6 +28,7 @@
     "start:prod": "npm run build && node bin/nts.mjs",
     "prepack": "npm run build && node scripts/prepack.mjs",
     "postpack": "node scripts/postpack.mjs",
+    "test": "npm run build:shared && npm run test --workspace=apps/be && npm run test --workspace=apps/ui",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -49,6 +50,7 @@
     "@nts/shared"
   ],
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "semantic-release": "^25.0.3"
   }
 }
