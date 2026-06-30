@@ -113,19 +113,19 @@ export class SettingsService {
     return (await this.read()).openRouterApiKey;
   }
 
-  /** The user-authored teacher system prompt (empty string when unset). */
-  async getSystemPrompt(): Promise<string> {
-    return (await this.read()).aiSystemPrompt ?? '';
-  }
-
-  /** The configured chat model, or null to fall back to the default. */
-  async getModel(): Promise<string | null> {
-    return (await this.read()).aiModel;
-  }
-
-  /** The user's display name, or null when unset. Lets the teacher address the
-   *  user by name. */
-  async getDisplayName(): Promise<string | null> {
-    return (await this.read()).displayName;
+  /** Everything the teacher chat needs, from a single read. `model` is null
+   *  when unset (caller falls back to the default); `systemPrompt` is the
+   *  user-authored prompt, empty string when unset. */
+  async getAiConfig(): Promise<{
+    apiKey: string | null;
+    model: string | null;
+    systemPrompt: string;
+  }> {
+    const s = await this.read();
+    return {
+      apiKey: s.openRouterApiKey,
+      model: s.aiModel,
+      systemPrompt: s.aiSystemPrompt ?? '',
+    };
   }
 }

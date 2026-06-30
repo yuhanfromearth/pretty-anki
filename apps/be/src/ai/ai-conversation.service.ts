@@ -22,15 +22,14 @@ export class AiConversationService {
     req: AiChatRequest,
     signal: AbortSignal,
   ): AsyncGenerator<AiStreamEvent> {
-    const apiKey = await this.settings.getApiKey();
-    if (!apiKey) {
+    const config = await this.settings.getAiConfig();
+    if (!config.apiKey) {
       yield { type: 'error', message: 'No OpenRouter API key configured.' };
       return;
     }
-
-    const model = (await this.settings.getModel()) || DEFAULT_AI_MODEL;
-    const userPrompt = await this.settings.getSystemPrompt();
-    const systemPrompt = buildSystemPrompt(userPrompt, req.context);
+    const apiKey = config.apiKey;
+    const model = config.model || DEFAULT_AI_MODEL;
+    const systemPrompt = buildSystemPrompt(config.systemPrompt, req.context);
 
     const file = await this.store.read(req.noteId);
     const id = req.conversationId ?? randomUUID();
