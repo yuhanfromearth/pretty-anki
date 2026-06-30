@@ -27,21 +27,41 @@ Built for one person's daily Korean reps, so the typography leans Hangul — but
 > AnkiConnect listens on `localhost:8765` by default. If yours is elsewhere, point the `ANKI_CONNECT_URL` env var at it.
 
 ## Getting started
+
 Try it out:
+
 ```sh
 npx pretty-anki
 ```
 
-
 Install it for good:
+
 ```sh
 npm install -g pretty-anki
 pretty-anki
 ```
 
-`pretty-anki` starts it on <http://localhost:8080> and opens it in your browser. Run it from anywhere, any time you want to study.
+`pretty-anki` starts it on <http://localhost:8080> and opens it in your browser. Run it from anywhere, any time you want to study. If the header status dot is muted, Anki/AnkiConnect isn't reachable — check that Anki is open.
 
-Open <http://localhost:3000>. The UI proxies `/api/*` to the backend, which forwards to AnkiConnect. If the header status dot is muted, Anki/AnkiConnect isn't reachable.
+## Version & updates
+
+Show latest version of pretty-anki:
+
+```sh
+npm view pretty-anki version
+```
+
+Find out your installed version:
+
+```sh
+npm ls -g pretty-anki
+```
+
+Update to the latest version:
+
+```sh
+npm install -g pretty-anki@latest
+```
 
 ## Stack
 
