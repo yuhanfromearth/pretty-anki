@@ -2,29 +2,44 @@
 
 ![anki-ui](apps/ui/public/image.png)
 
-You like Anki but can't stand how it looks?
+You love Anki. You do not love looking at it.
 
-> ⚠️ **Reality check:** no amount of prettiness will help you learn a language. In the end it comes down to putting in the hours, week after week after week. This just makes those hours a little nicer to look at.
+This is a calmer face for the same Anki you already use. Your decks, your cards, your scheduling... just wrapped in something nicer to sit in front of for twenty minutes a day. It reads your real collection live through the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on, so anything you do here lands in Anki proper.
 
-A prettier front-end for [Anki](https://apps.ankiweb.net/). It talks to your local Anki collection through the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on and wraps it in a calm, typed web UI — deck stats, reviewing, a streak heat-map, and full deck management (search, add, edit, and delete cards with a rich-text editor).
+> ⚠️ **Reality check:** no amount of prettiness will teach you a language. Concept behind spaced repetition does not change. Consistency will beat the game. This just makes these hours a bit prettier to look at.
 
-## Prerequisites
+What you get:
 
-- Node 20+
-- **Anki Desktop App running** with the **AnkiConnect** add-on installed (listening on `localhost:8765`). The backend reaches it via the env var `ANKI_CONNECT_URL` (defaults to `http://localhost:8765`).
+- **Reviewing** — flip cards and grade them, audio and all, without the clutter
+- **AI Teacher** — Ever wanted to have some example sentences for a given anki card? Enter your OpenRouter API key and the pretty-anki ai teacher makes it possible.
+- **Deck management** — search, add, edit, and delete cards with a proper rich-text editor
+- **Card templates** — tweak how your cards are laid out, with a live preview
+- **A dashboard** — your streak, what's due, and a heat-map of the days you've put in
+
+Built for one person's daily Korean reps, so the typography leans Hangul — but it talks to any Anki collection.
+
+## Before you start
+
+- **Keep Anki open.** This is a window into your running Anki, not a replacement — if Anki is closed, there's nothing to show.
+- Install the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on in Anki (Tools → Add-ons → Get Add-ons → code `2055492159`, then restart Anki).
+- Node 20+ to run it.
+
+> AnkiConnect listens on `localhost:8765` by default. If yours is elsewhere, point the `ANKI_CONNECT_URL` env var at it.
 
 ## Getting started
-
+Try it out:
 ```sh
-npm install
-npm start
+npx pretty-anki
 ```
 
-`npm start` builds the shared DTOs, then runs three watchers concurrently:
 
-- `shared` — `tsc --watch`
-- `apps/be` — NestJS on `:8080` (routes under `/api`, Swagger at `/api/docs`)
-- `apps/ui` — Vite dev server on `:3000`
+Install it for good:
+```sh
+npm install -g pretty-anki
+pretty-anki
+```
+
+`pretty-anki` starts it on <http://localhost:8080> and opens it in your browser. Run it from anywhere, any time you want to study.
 
 Open <http://localhost:3000>. The UI proxies `/api/*` to the backend, which forwards to AnkiConnect. If the header status dot is muted, Anki/AnkiConnect isn't reachable.
 

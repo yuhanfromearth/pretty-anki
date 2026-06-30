@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": "github:yuhanfromearth/pretty-anki",
   "bin": {
-    "nts": "bin/nts.mjs"
+    "pretty-anki": "bin/nts.mjs"
   },
   "files": [
     "bin",

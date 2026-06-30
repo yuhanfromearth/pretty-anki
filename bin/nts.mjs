@@ -13,7 +13,7 @@ const mainPath = join(here, '..', 'apps', 'be', 'dist', 'main.js');
 await import(pathToFileURL(mainPath).href);
 
 const url = `http://localhost:${process.env.PORT}`;
-console.log(`\n  nts running on ${url}\n`);
+console.log(`\n  pretty-anki running on ${url}\n`);
 
 if (!process.env.NTS_NO_OPEN) {
   const opener =
