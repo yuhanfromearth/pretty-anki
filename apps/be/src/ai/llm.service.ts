@@ -8,16 +8,10 @@ export interface LlmMessage {
 
 const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-// OpenRouter pre-flight-checks `max_tokens × completion_price` against the key's
-// remaining credit. Without a cap it assumes the model's full output capacity,
-// which can fail even tiny prompts on tight budgets — so cap to a sane reply.
 const CHAT_MAX_TOKENS = 8192;
 
 @Injectable()
 export class LlmService {
-  // Streams assistant text deltas from OpenRouter. No tools, no usage tracking —
-  // the teacher is grounded entirely in the system prompt, so we only need the
-  // content stream. Yields raw delta strings as they arrive.
   async *chatStream(
     messages: LlmMessage[],
     systemPrompt: string,

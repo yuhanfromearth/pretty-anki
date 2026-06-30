@@ -18,10 +18,6 @@ export class AiConversationService {
     private readonly llm: LlmService,
   ) {}
 
-  // Streams one teacher turn. The model, system prompt and API key are read
-  // server-side from settings — never sent by the browser. The conversation is
-  // persisted only on a clean finish: an error or a client disconnect (abort)
-  // discards the partial reply so nothing half-written lands on disk.
   async *chatStream(
     req: AiChatRequest,
     signal: AbortSignal,
@@ -88,13 +84,6 @@ export class AiConversationService {
   }
 }
 
-// Final system prompt = the user's settings-authored persona + the current
-// card's fields, so the model knows which word the user is asking about without
-// them pasting it in. The card block is framed as private context with an
-// explicit instruction not to echo it, so the model doesn't leak the internal
-// `<current_card>` scaffolding (tags, field names, sound markers) to the user.
-// When the user has set a display name, the teacher is told it so it can address
-// them personally.
 function buildSystemPrompt(userPrompt: string, context: AiCardContext): string {
   const fields = Object.entries(context.fields)
     .map(([name, value]) => [name, cleanFieldValue(value)] as const)
@@ -117,9 +106,6 @@ function buildSystemPrompt(userPrompt: string, context: AiCardContext): string {
   return [trimmed, guard, cardBlock].filter(Boolean).join('\n\n');
 }
 
-// Reduce a raw note field to plain text for the prompt: drop Anki sound/play
-// markers and HTML so noise like `[sound:foo.mp3]` never reaches the model (and
-// audio-only fields collapse to empty and get dropped).
 function cleanFieldValue(value: string): string {
   return value
     .replace(/\[sound:[^\]]+]/g, '')

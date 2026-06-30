@@ -295,10 +295,6 @@ export class AnkiConnectService {
       const card = await this.invoke<RawCurrentCard | null>('guiCurrentCard');
       if (!card) return null;
 
-      // guiCurrentCard includes neither the note id, the card-template index,
-      // nor the scheduling state, so resolve them from cardsInfo. `ord` lets the
-      // review screen pick the direction for reversed note types (ord 0 forward,
-      // ord 1 reverse); `type` drives the card's corner badge.
       const [info] = await this.invoke<
         { note: number; ord: number; type: number }[]
       >('cardsInfo', { cards: [card.cardId] });
